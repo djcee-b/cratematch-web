@@ -79,7 +79,8 @@ dist
 
 # Gatsby files
 .cache/
-public
+# Don't ignore public directory - it contains the web app files
+# public
 
 # Storybook build outputs
 .out

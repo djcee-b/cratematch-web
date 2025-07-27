@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrateMatch - Spotify to Serato Crate Converter</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header with user info -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <h1>CrateMatch <span class="beta-label">beta</span></h1>
+      </div>
+      <div class="user-info" id="user-info" style="display: none;">
+        <div class="user-details">
+          <span class="user-email" id="user-email"></span>
+          <span class="subscription-status" id="subscription-status"></span>
+        </div>
+        <button class="settings-btn" id="settings-btn">Settings</button>
+        <button class="sign-out-btn" id="sign-out-btn">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Database Status Bar -->
+  <div class="database-status-bar" id="database-status-bar" style="display: none;">
+    <div class="status-bar-content">
+      <div class="status-indicator">
+        <div class="status-dot"></div>
+        <span class="status-text">Database Ready</span>
+      </div>
+      <div class="database-meta">
+        <span class="last-updated">Last updated: <span id="database-date">Loading...</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <!-- Process Playlist Section -->
+    <section class="process-section" id="process-section">
+      <div class="section-header">
+        <h2>Convert Spotify Playlist to Serato Crate</h2>
+        <p>Paste your Spotify playlist URL below to get started</p>
+      </div>
+      <div class="section-content">
+        <div class="form-group">
+          <label for="playlistUrl">Spotify Playlist URL</label>
+          <input type="url" id="playlistUrl" placeholder="https://open.spotify.com/playlist/..." required>
+        </div>
+        <div class="form-group">
+          <label for="threshold">Match Threshold (%)</label>
+          <input type="range" id="threshold" min="50" max="100" value="90" class="threshold-slider">
+          <div class="threshold-value">
+            <span id="thresholdValue">90%</span>
+          </div>
+        </div>
+        <button class="process-btn" id="process-btn" disabled>Process Playlist</button>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section" id="results-section" style="display: none;">
+      <div class="section-header">
+        <h2>Processing Complete</h2>
+      </div>
+      <div class="section-content">
+        <div class="results-summary" id="results-summary"></div>
+        <div class="results-details" id="results-details"></div>
+        <div class="download-section" id="download-section" style="display: none;">
+          <button class="download-btn" id="download-btn">Download .crate File</button>
+        </div>
+        <button class="new-playlist-btn" id="new-playlist-btn">Process Another Playlist</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Processing overlay -->
+  <div class="processing-overlay" id="processing-overlay" style="display: none;">
+    <div class="processing-content">
+      <div class="spinner"></div>
+      <h3>Processing Playlist...</h3>
+      <p id="processing-message">This may take a few moments depending on the playlist size.</p>
+      <div class="progress-container" id="progress-container" style="display: none;">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-text" id="progress-text">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error modal -->
+  <div class="modal-overlay" id="error-modal" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Error</h3>
+        <button class="modal-close" id="error-close">×</button>
+      </div>
+      <div class="modal-content">
+        <p id="error-message"></p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="error-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="modal-overlay" id="settings-modal" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Settings</h3>
+        <button class="modal-close" id="settings-close">×</button>
+      </div>
+      <div class="modal-content">
+        <div class="settings-section">
+          <h4>Database File</h4>
+          <p>Update your Serato database file. This will overwrite your existing database file.</p>
+          <div class="upload-area-small" id="settings-upload-area">
+            <div class="upload-icon">📁</div>
+            <p>Drag and drop your new database file here, or click to browse</p>
+            <button class="upload-btn-small" id="settings-upload-btn">Choose File</button>
+            <input type="file" id="settingsDatabaseFile" accept="*" style="display: none;">
+          </div>
+          <div class="upload-status" id="settings-upload-status" style="display: none;">
+            <div class="status-message" id="settings-upload-message"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subscription expired modal -->
+  <div class="modal-overlay" id="subscription-modal" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Trial Expired</h3>
+        <button class="modal-close" id="subscription-close">×</button>
+      </div>
+      <div class="modal-content">
+        <p>Your 7-day free trial has expired. Please upgrade to continue using CrateMatch.</p>
+        <div class="subscription-options">
+          <a href="https://buy.stripe.com/8x2dR938FdTEdGHestdMI0d" target="_blank" class="btn-primary">Upgrade Now</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html> 

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to CrateMatch - Onboarding</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            color: #f8fafc;
+        }
+
+        .onboarding-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .welcome-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .welcome-header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+        
+        .welcome-header p {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            line-height: 1.6;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .instructions-section {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 1rem;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .instructions-section h2 {
+            color: #f8fafc;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .instruction-step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 0.75rem;
+            transition: all 0.2s ease;
+        }
+        
+        .instruction-step:hover {
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+        
+        .step-number {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.125rem;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-content h3 {
+            margin: 0 0 0.75rem 0;
+            color: #f8fafc;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .step-content p {
+            margin: 0 0 1rem 0;
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+        
+        .file-path {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            font-size: 0.875rem;
+            margin: 0.5rem 0;
+            display: inline-block;
+            color: #e2e8f0;
+        }
+        
+        .upload-section {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(20px);
+            border: 2px dashed rgba(59, 130, 246, 0.3);
+            border-radius: 1rem;
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .upload-section:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .upload-section.dragover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .upload-icon {
+            font-size: 4rem;
+            color: #3b82f6;
+            margin-bottom: 1.5rem;
+        }
+        
+        .upload-text {
+            font-size: 1.5rem;
+            color: #f8fafc;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .upload-hint {
+            color: #94a3b8;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 0.875rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.25);
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.35);
+        }
+        
+        .upload-btn:disabled {
+            background: #64748b;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .upload-status {
+            margin-top: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            display: none;
+            font-weight: 500;
+        }
+        
+        .upload-status.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .upload-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .upload-status.loading {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .continue-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            border-radius: 0.5rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: none;
+            box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.25);
+            margin: 0 auto;
+        }
+        
+        .continue-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.35);
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.75rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .onboarding-container {
+                padding: 1rem;
+            }
+            
+            .welcome-header h1 {
+                font-size: 2rem;
+            }
+            
+            .welcome-header p {
+                font-size: 1rem;
+            }
+            
+            .instructions-section {
+                padding: 1.5rem;
+            }
+            
+            .instruction-step {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .step-number {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+            
+            .upload-section {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="onboarding-container">
+        <div class="welcome-header">
+            <h1>🎵 Welcome to CrateMatch!</h1>
+            <p>Convert your Spotify playlists into Serato crates in just a few clicks.</p>
+        </div>
+        
+        <div class="instructions-section">
+            <h2>📁 First, we need your Serato database file</h2>
+            
+            <div class="instruction-step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Find your Serato database file</h3>
+                    <p>Open your Serato DJ software and look for the "database V2" file. It's usually located at:</p>
+                    <div class="file-path">macOS: ~/Music/_Serato_/database V2</div>
+                    <div class="file-path">Windows: C:\Users\[YourName]\Music\_Serato_\database V2</div>
+                </div>
+            </div>
+            
+            <div class="instruction-step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Copy the file</h3>
+                    <p>Copy the "database V2" file to your desktop or downloads folder so you can easily upload it.</p>
+                </div>
+            </div>
+            
+            <div class="instruction-step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Upload below</h3>
+                    <p>Click the upload area below and select your "database V2" file. We'll store it securely and you won't need to upload it again.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="upload-section" id="upload-section">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Upload your Serato database file</div>
+            <div class="upload-hint">Drag and drop your "database V2" file here, or click to browse</div>
+            <input type="file" id="databaseFile" class="file-input" accept="*">
+            <button class="upload-btn" id="uploadBtn">Choose File</button>
+        </div>
+        
+        <div class="upload-status" id="uploadStatus"></div>
+        
+        <button class="continue-btn" id="continueBtn">Continue to CrateMatch →</button>
+    </div>
+
+    <script src="onboarding.js"></script>
+</body>
+</html> 

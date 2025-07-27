@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrateMatch - Sign In</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    .trial-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(34, 197, 94, 0.15));
+      border: 2px solid rgba(59, 130, 246, 0.3);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin: 16px 0;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1);
+    }
+    
+    .badge-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    
+    .badge-content {
+      flex: 1;
+      text-align: left;
+    }
+    
+    .badge-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #3b82f6;
+      margin-bottom: 4px;
+      letter-spacing: -0.01em;
+    }
+    
+    .badge-features {
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    
+    /* Hide the badge by default, show only for signup */
+    .trial-badge {
+      display: none;
+    }
+    
+    .signup-active .trial-badge {
+      display: flex;
+    }
+
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      padding: 20px;
+    }
+
+    .auth-card {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .app-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .beta-label {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-size: 14px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .auth-form {
+      display: block;
+    }
+
+    .auth-form.hidden {
+      display: none;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+    }
+
+    .auth-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      color: #f8fafc;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .auth-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .auth-input::placeholder {
+      color: #64748b;
+    }
+
+    .form-actions {
+      margin-top: 24px;
+    }
+
+    .primary-btn-wide {
+      width: 100%;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .primary-btn-wide:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    }
+
+    .primary-btn-wide:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-loading.hidden {
+      display: none;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .forgot-password-btn {
+      background: none;
+      border: none;
+      color: #3b82f6;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 12px;
+      text-decoration: underline;
+    }
+
+    .forgot-password-btn:hover {
+      color: #60a5fa;
+    }
+
+    .auth-switch {
+      text-align: center;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .auth-switch p {
+      color: #94a3b8;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .switch-btn {
+      background: none;
+      border: none;
+      color: #3b82f6;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .switch-btn:hover {
+      color: #60a5fa;
+    }
+
+    .secondary-btn {
+      width: 100%;
+      padding: 12px 24px;
+      background: rgba(148, 163, 184, 0.1);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      color: #cbd5e1;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 12px;
+    }
+
+    .secondary-btn:hover {
+      background: rgba(148, 163, 184, 0.2);
+    }
+
+    .forgot-note {
+      text-align: center;
+      margin-top: 16px;
+    }
+
+    .forgot-note p {
+      color: #64748b;
+      font-size: 13px;
+      margin: 0;
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      color: #fca5a5;
+      font-size: 14px;
+    }
+
+    .success-message {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      color: #86efac;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1 class="app-title">CrateMatch <span class="beta-label">beta</span></h1>
+        <div class="trial-badge">
+          <div class="badge-icon">🎉</div>
+          <div class="badge-content">
+            <div class="badge-title">Sign up for a 7-Day Free Trial</div>
+            <div class="badge-features">Unlimited exports • 1000 track playlists • Import history • Track variations</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="login-form" class="auth-form">
+        <div id="login-error" class="error-message" style="display: none;"></div>
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" class="auth-input" placeholder="Enter your email" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" class="auth-input" placeholder="Enter your password" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="primary-btn-wide">
+            <span class="btn-text">Sign In</span>
+            <div class="btn-loading hidden">
+              <div class="spinner"></div>
+              <span>Signing in...</span>
+            </div>
+          </button>
+          <button type="button" class="forgot-password-btn" id="forgot-password-btn">Forgot Password?</button>
+        </div>
+        <div class="auth-switch">
+          <p>Don't have an account? <button type="button" class="switch-btn" id="show-signup-btn">Sign Up</button></p>
+        </div>
+      </form>
+
+      <!-- Sign Up Form -->
+      <form id="signup-form" class="auth-form hidden">
+        <div id="signup-error" class="error-message" style="display: none;"></div>
+        <div id="signup-success" class="success-message" style="display: none;"></div>
+        <div class="form-group">
+          <label for="signup-email">Email</label>
+          <input type="email" id="signup-email" class="auth-input" placeholder="Enter your email address" required>
+        </div>
+        <div class="form-group">
+          <label for="signup-password">Password</label>
+          <input type="password" id="signup-password" class="auth-input" placeholder="Create a password" required>
+        </div>
+        <div class="form-group">
+          <label for="signup-confirm-password">Confirm Password</label>
+          <input type="password" id="signup-confirm-password" class="auth-input" placeholder="Confirm your password" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="primary-btn-wide">
+            <span class="btn-text">Sign Up</span>
+            <div class="btn-loading hidden">
+              <div class="spinner"></div>
+              <span>Signing up...</span>
+            </div>
+          </button>
+        </div>
+        <div class="auth-switch">
+          <p>Already have an account? <button type="button" class="switch-btn" id="show-login-btn">Sign In</button></p>
+        </div>
+      </form>
+
+      <!-- Forgot Password Form -->
+      <form id="forgot-form" class="auth-form hidden">
+        <div id="forgot-error" class="error-message" style="display: none;"></div>
+        <div id="forgot-success" class="success-message" style="display: none;"></div>
+        <div class="form-group">
+          <label for="forgot-email">Email</label>
+          <input type="email" id="forgot-email" class="auth-input" placeholder="Enter your email address" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="primary-btn-wide">
+            <span class="btn-text">Reset Password</span>
+            <div class="btn-loading hidden">
+              <div class="spinner"></div>
+              <span>Sending reset link...</span>
+            </div>
+          </button>
+          <button type="button" class="secondary-btn" id="back-to-login">Back to Login</button>
+        </div>
+        <div class="forgot-note">
+          <p>We'll send you a link to reset your password.</p>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+</body>
+</html> 
