@@ -111,6 +111,94 @@
 
 
 
+  <!-- Payment Instructions Modal -->
+  <div class="modal-overlay" id="payment-instructions-modal" style="display: none;">
+    <div class="modal payment-instructions-modal">
+      <div class="modal-header">
+        <h3>Complete Your Payment</h3>
+        <button class="modal-close" id="payment-instructions-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="payment-instructions-content">
+          <div class="payment-icon">💳</div>
+          <h4>Important Payment Instructions</h4>
+          <div class="instructions-list">
+            <div class="instruction-item">
+              <span class="instruction-icon">⚠️</span>
+              <span><strong>Email Address:</strong> You MUST use the same email address as your CrateMatch account: <span id="payment-email" class="highlight-email"></span></span>
+            </div>
+            <div class="instruction-item">
+              <span class="instruction-icon">✅</span>
+              <span>Complete your payment on the Stripe page</span>
+            </div>
+            <div class="instruction-item">
+              <span class="instruction-icon">🔄</span>
+              <span>Return to this page and click "Refresh" to activate your subscription</span>
+            </div>
+          </div>
+          <div class="payment-warning">
+            <p><strong>Note:</strong> If you use a different email address, your subscription won't be linked to your account.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary-btn" id="payment-instructions-close-btn">Cancel</button>
+        <button class="primary-btn" id="proceed-to-payment-btn">Proceed to Payment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Completion Modal -->
+  <div class="modal-overlay" id="payment-completion-modal" style="display: none;">
+    <div class="modal payment-completion-modal">
+      <div class="modal-header">
+        <h3>Complete Your Subscription</h3>
+        <button class="modal-close" id="payment-completion-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="payment-completion-content">
+          <div class="completion-header">
+            <h4>Activate Your Subscription</h4>
+            <p class="completion-description">Complete your subscription activation to unlock all premium features</p>
+          </div>
+          
+          <div class="email-reminder">
+            <div class="email-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z" fill="#fbbf24"/>
+              </svg>
+            </div>
+            <div class="email-info">
+              <span class="email-label">Payment Email:</span>
+              <span id="completion-email" class="email-value"></span>
+              <p class="email-warning">Be sure to use this email as your payment email otherwise your account won't apply. Any issues contact djceeb@gmail.com</p>
+            </div>
+          </div>
+          
+          <div class="completion-features">
+            <div class="feature-item">
+              <div class="feature-icon">✓</div>
+              <span>Unlimited playlist exports</span>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon">✓</div>
+              <span>Import history tracking</span>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon">✓</div>
+              <span>Advanced track matching</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer centered">
+        <button class="primary-btn large" id="refresh-subscription-btn">
+          Refresh & Activate
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Success Modal -->
   <div class="modal-overlay" id="success-modal" style="display: none;">
     <div class="modal success-modal">
@@ -120,27 +208,31 @@
       </div>
       <div class="modal-body">
         <div class="success-content">
-          <div class="success-icon">✅</div>
+          <div class="success-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z" fill="#22c55e"/>
+            </svg>
+          </div>
           <h4>Welcome to CrateMatch Pro!</h4>
           <p>Your subscription has been activated. You now have access to unlimited exports and all premium features.</p>
           <div class="success-features">
             <div class="feature-item">
-              <span class="feature-icon">🎵</span>
+              <div class="feature-icon">✓</div>
               <span>Unlimited playlist exports</span>
             </div>
             <div class="feature-item">
-              <span class="feature-icon">📊</span>
+              <div class="feature-icon">✓</div>
               <span>Import history tracking</span>
             </div>
             <div class="feature-item">
-              <span class="feature-icon">🔍</span>
+              <div class="feature-icon">✓</div>
               <span>Advanced track matching</span>
             </div>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="primary-btn" id="success-continue-btn">Continue to App</button>
+      <div class="modal-footer centered">
+        <button class="primary-btn large" id="success-continue-btn">Continue to App</button>
       </div>
     </div>
   </div>

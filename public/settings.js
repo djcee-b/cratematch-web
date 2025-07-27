@@ -62,6 +62,7 @@ async function checkAuth() {
 
     const userData = await response.json();
     currentUser = userData.user;
+    currentUser.subscriptionStatus = userData.subscriptionStatus; // Add subscription status to user object
     authToken = token;
 
     // Update UI
@@ -84,7 +85,7 @@ function updateUserInterface() {
   }
 
   if (subscriptionStatus) {
-    const status = currentUser.role || "free";
+    const status = currentUser.subscriptionStatus || "free";
     subscriptionStatus.textContent =
       status.charAt(0).toUpperCase() + status.slice(1);
   }
@@ -95,7 +96,7 @@ function updateUserInterface() {
   }
 
   if (accountType) {
-    const status = currentUser.role || "free";
+    const status = currentUser.subscriptionStatus || "free";
     accountType.textContent = status.charAt(0).toUpperCase() + status.slice(1);
   }
 
@@ -119,7 +120,9 @@ function updateUserInterface() {
 function updateSubscriptionDisplay() {
   if (!currentUser) return;
 
-  const status = currentUser.role || "free";
+  const status = currentUser.subscriptionStatus || "free";
+  console.log("Settings page - User subscription status:", status);
+  console.log("Settings page - Current user object:", currentUser);
 
   // Hide all sections first
   if (freeSubscriptionSection) freeSubscriptionSection.style.display = "none";
@@ -130,8 +133,12 @@ function updateSubscriptionDisplay() {
   // Show appropriate section
   switch (status) {
     case "free":
+      console.log("Settings page - Showing FREE section");
       if (freeSubscriptionSection) {
         freeSubscriptionSection.style.display = "block";
+        console.log("Settings page - FREE section displayed");
+      } else {
+        console.error("Settings page - FREE section element not found!");
       }
       if (freePlanActionBtn) {
         freePlanActionBtn.textContent = "Upgrade to Pro";
@@ -167,7 +174,7 @@ function updateSubscriptionDisplay() {
 
 // Update trial countdown
 function updateTrialCountdown() {
-  if (!currentUser || currentUser.role !== "trial") return;
+  if (!currentUser || currentUser.subscriptionStatus !== "trial") return;
 
   const trialEnd = new Date(
     currentUser.trial_end || Date.now() + 7 * 24 * 60 * 60 * 1000

@@ -170,6 +170,9 @@ function updateUserInterface(data) {
   subscriptionStatus.className = `subscription-status ${statusClass}`;
 
   userInfo.style.display = "flex";
+
+  // Setup settings button after user info is shown
+  setupSettingsButton();
 }
 
 // Load user's uploaded databases
@@ -266,10 +269,53 @@ function updateUploadStatus(message, type) {
   uploadStatus.style.display = "block";
 }
 
-// Threshold slider
-threshold.addEventListener("input", () => {
-  thresholdValue.textContent = `${threshold.value}%`;
+// Threshold buttons
+const thresholdButtons = document.querySelectorAll(".threshold-btn");
+thresholdButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const value = parseInt(button.dataset.value);
+
+    // Update hidden input
+    threshold.value = value;
+    thresholdValue.textContent = `${value}%`;
+
+    // Update active button
+    thresholdButtons.forEach((btn) => btn.classList.remove("active"));
+    button.classList.add("active");
+
+    // Update example
+    updateThresholdExample(value);
+  });
 });
+
+// Initialize threshold example
+updateThresholdExample(threshold.value);
+
+function updateThresholdExample(value) {
+  const examplePercent = document.getElementById("examplePercent");
+  const exampleTrack = document.getElementById("exampleTrack");
+  const exampleExplanation = document.getElementById("exampleExplanation");
+
+  if (examplePercent) examplePercent.textContent = value;
+
+  if (exampleTrack && exampleExplanation) {
+    if (value <= 80) {
+      exampleTrack.textContent =
+        "No No No Pt 2 - destinys child → No No No Part 2 - destinys child";
+      exampleExplanation.textContent =
+        'Larger difference: "Pt 2" vs "Part 2". Numbers written as words or abbreviations are still matched at this threshold.';
+    } else if (value <= 90) {
+      exampleTrack.textContent =
+        "Doo Wop - ms lauryn hill → Doo Wop - lauryn hill";
+      exampleExplanation.textContent =
+        'Minor difference: The spotify track has "ms" before the artist, but the Serato Version does not. Small missing words are allowed.';
+    } else {
+      exampleTrack.textContent = "Crew Love - Drake → Crew Love - Drake";
+      exampleExplanation.textContent =
+        "EXACT MATCH: This is considered a perfect match.";
+    }
+  }
+}
 
 // Enable process button when URL is entered
 playlistUrl.addEventListener("input", () => {
@@ -285,6 +331,7 @@ newPlaylistBtn.addEventListener("click", () => {
   playlistUrl.value = "";
   threshold.value = 90;
   thresholdValue.textContent = "90%";
+  updateThresholdExample(90);
 
   // Reset button state
   processBtn.disabled = true;
@@ -626,8 +673,30 @@ window.addEventListener("click", (e) => {
 });
 
 // Settings functionality
+function setupSettingsButton() {
+  // Setup settings button to redirect to settings page
+  console.log("Setting up settings button:", settingsBtn);
+  if (settingsBtn) {
+    // Remove any existing event listeners
+    settingsBtn.removeEventListener("click", handleSettingsClick);
+    // Add new event listener
+    settingsBtn.addEventListener("click", handleSettingsClick);
+    console.log("Settings button event listener added");
+  } else {
+    console.error("Settings button not found!");
+  }
+}
+
+function handleSettingsClick() {
+  console.log("Settings button clicked, redirecting to settings page");
+  window.location.href = "/settings.html";
+}
+
 function setupSettings() {
-  const settingsBtn = document.getElementById("settings-btn");
+  // Setup settings button to redirect to settings page
+  setupSettingsButton();
+
+  // Setup settings modal elements (only if they exist)
   const settingsModal = document.getElementById("settings-modal");
   const settingsClose = document.getElementById("settings-close");
   const settingsUploadArea = document.getElementById("settings-upload-area");
@@ -640,58 +709,58 @@ function setupSettings() {
     "settings-upload-message"
   );
 
-  // Open settings page
-  settingsBtn.addEventListener("click", () => {
-    window.location.href = "/settings.html";
-  });
-
-  // Close settings modal
-  settingsClose.addEventListener("click", () => {
-    settingsModal.style.display = "none";
-  });
-
-  // Close modal when clicking outside
-  window.addEventListener("click", (e) => {
-    if (e.target === settingsModal) {
+  // Only setup modal functionality if modal exists
+  if (settingsModal && settingsClose) {
+    settingsClose.addEventListener("click", () => {
       settingsModal.style.display = "none";
-    }
-  });
+    });
 
-  // Settings drag and drop
-  settingsUploadArea.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    settingsUploadArea.classList.add("dragover");
-  });
+    // Close modal when clicking outside
+    window.addEventListener("click", (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.style.display = "none";
+      }
+    });
+  }
 
-  settingsUploadArea.addEventListener("dragleave", (e) => {
-    e.preventDefault();
-    settingsUploadArea.classList.remove("dragover");
-  });
+  // Only setup upload functionality if elements exist
+  if (settingsUploadArea && settingsDatabaseFile && settingsUploadBtn) {
+    // Settings drag and drop
+    settingsUploadArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      settingsUploadArea.classList.add("dragover");
+    });
 
-  settingsUploadArea.addEventListener("drop", (e) => {
-    e.preventDefault();
-    settingsUploadArea.classList.remove("dragover");
+    settingsUploadArea.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      settingsUploadArea.classList.remove("dragover");
+    });
 
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleSettingsFileUpload(files[0]);
-    }
-  });
+    settingsUploadArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      settingsUploadArea.classList.remove("dragover");
 
-  settingsUploadArea.addEventListener("click", () => {
-    settingsDatabaseFile.click();
-  });
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleSettingsFileUpload(files[0]);
+      }
+    });
 
-  settingsDatabaseFile.addEventListener("change", (e) => {
-    if (e.target.files.length > 0) {
-      handleSettingsFileUpload(e.target.files[0]);
-    }
-  });
+    settingsUploadArea.addEventListener("click", () => {
+      settingsDatabaseFile.click();
+    });
 
-  settingsUploadBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    settingsDatabaseFile.click();
-  });
+    settingsDatabaseFile.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) {
+        handleSettingsFileUpload(e.target.files[0]);
+      }
+    });
+
+    settingsUploadBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      settingsDatabaseFile.click();
+    });
+  }
 }
 
 // Handle settings file upload (overwrites existing database)
@@ -763,9 +832,8 @@ document.addEventListener("DOMContentLoaded", () => {
       hideLoadingOverlay();
     }
   }, 10000); // 10 second timeout
-  
+
   checkAuth();
-  setupSettings();
   setupUpgradeButton();
 });
 

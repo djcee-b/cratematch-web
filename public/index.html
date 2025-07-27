@@ -74,10 +74,29 @@
           <input type="url" id="playlistUrl" placeholder="https://open.spotify.com/playlist/..." required>
         </div>
         <div class="form-group">
-          <label for="threshold">Match Threshold (%)</label>
-          <input type="range" id="threshold" min="50" max="100" value="90" class="threshold-slider">
+          <label for="threshold">Match Threshold</label>
+          <div class="threshold-buttons">
+            <button class="threshold-btn orange" data-value="80" id="threshold-80">
+              <div class="btn-percent">80%</div>
+              <div class="btn-label">Loose</div>
+            </button>
+            <button class="threshold-btn blue active" data-value="90" id="threshold-90">
+              <div class="btn-percent">90%</div>
+              <div class="btn-label">Standard</div>
+            </button>
+            <button class="threshold-btn green" data-value="100" id="threshold-100">
+              <div class="btn-percent">100%</div>
+              <div class="btn-label">Exact</div>
+            </button>
+          </div>
+          <input type="hidden" id="threshold" value="90">
           <div class="threshold-value">
             <span id="thresholdValue">90%</span>
+          </div>
+          <div class="threshold-example-box">
+            <div class="example-header">Example <span id="examplePercent">90</span>% match:</div>
+            <div class="example-track" id="exampleTrack">Doo Wop - ms lauryn hill → Doo Wop - lauryn hill</div>
+            <div class="example-explanation" id="exampleExplanation">Minor difference: The spotify track has "ms" before the artist, but the Serato Version does not. Small missing words are allowed.</div>
           </div>
         </div>
         <button class="process-btn" id="process-btn" disabled>Process Playlist</button>
