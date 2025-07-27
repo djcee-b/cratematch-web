@@ -4,7 +4,7 @@
   "description": "Web version of CrateMatch - Spotify playlist to Serato crate converter",
   "main": "server.js",
   "engines": {
-    "node": ">=18.0.0",
+    "node": "18.x",
     "npm": ">=8.0.0"
   },
   "scripts": {
@@ -26,7 +26,8 @@
     "path": "^0.12.7"
   },
   "overrides": {
-    "@musiclibrarytools/wav-tag-node": "npm:@musiclibrarytools/mp4-tag-node@^1.0.2"
+    "@musiclibrarytools/wav-tag-node": "npm:mp3tag.js@^3.11.4",
+    "@musiclibrarytools/mp4-tag-node": "npm:mp3tag.js@^3.11.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
