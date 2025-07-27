@@ -1031,10 +1031,39 @@ app.get(
       console.log(`Using database: ${localDatabasePath}`);
       console.log(`Threshold: ${threshold}`);
 
+      // Set up periodic progress updates in case MLT.js callback doesn't fire
+      let lastProgressUpdate = Date.now();
+      const progressInterval = setInterval(() => {
+        const currentSession = activeSessions.get(sessionId);
+        if (!currentSession || !currentSession.isActive) {
+          clearInterval(progressInterval);
+          return;
+        }
+
+        const timeSinceLastUpdate = Date.now() - lastProgressUpdate;
+        if (timeSinceLastUpdate > 5000) {
+          // 5 seconds without update
+          console.log("No progress update received, sending heartbeat...");
+          try {
+            res.write(
+              `data: ${JSON.stringify({
+                type: "progress",
+                progress: 50,
+                message: "Processing playlist... (heartbeat)",
+              })}\n\n`
+            );
+          } catch (writeError) {
+            console.error("Failed to write heartbeat progress:", writeError);
+            clearInterval(progressInterval);
+          }
+        }
+      }, 3000); // Check every 3 seconds
+
       // Process the playlist with progress updates
       const results = await importSpotifyPlaylist(
         playlistUrl,
         (progress) => {
+          lastProgressUpdate = Date.now(); // Update timestamp when we get progress
           // Check if session is still active
           const currentSession = activeSessions.get(sessionId);
           if (!currentSession || !currentSession.isActive) {
@@ -1047,6 +1076,16 @@ app.get(
           console.log("Progress callback received:", progress);
           console.log("Progress type:", typeof progress);
           console.log("Progress constructor:", progress?.constructor?.name);
+          console.log(
+            "Progress keys:",
+            progress && typeof progress === "object"
+              ? Object.keys(progress)
+              : "N/A"
+          );
+          console.log(
+            "Full progress object:",
+            JSON.stringify(progress, null, 2)
+          );
 
           // Handle different progress formats
           let progressPercent;
@@ -1067,11 +1106,16 @@ app.get(
               progressPercent = Math.min(90, Math.max(10, progress.percentage));
             } else if (progress.progress !== undefined) {
               progressPercent = Math.min(90, Math.max(10, progress.progress));
+            } else if (progress.value !== undefined) {
+              progressPercent = Math.min(90, Math.max(10, progress.value));
+            } else if (progress.percent !== undefined) {
+              progressPercent = Math.min(90, Math.max(10, progress.percent));
             } else {
               progressPercent = 50; // Default fallback
             }
             message =
               progress.message ||
+              progress.status ||
               `Processing playlist... ${Math.round(progressPercent)}%`;
           } else if (typeof progress === "string") {
             // If progress is a string, try to extract a number or use as message
@@ -1101,13 +1145,18 @@ app.get(
             throw new Error("Client disconnected");
           }
 
-          res.write(
-            `data: ${JSON.stringify({
-              type: "progress",
-              progress: Math.round(progressPercent),
-              message: message,
-            })}\n\n`
-          );
+          try {
+            res.write(
+              `data: ${JSON.stringify({
+                type: "progress",
+                progress: Math.round(progressPercent),
+                message: message,
+              })}\n\n`
+            );
+          } catch (writeError) {
+            console.error("Failed to write progress update:", writeError);
+            throw new Error("Client disconnected");
+          }
         },
         threshold,
         localDatabasePath,
@@ -1123,6 +1172,9 @@ app.get(
       );
 
       console.log("Import process completed!");
+
+      // Clean up progress interval
+      clearInterval(progressInterval);
 
       // Find the generated crate file in the global subcrates directory
       let crateFile = null;
@@ -1635,6 +1687,23 @@ app.get("/", (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
