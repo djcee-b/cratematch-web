@@ -156,11 +156,18 @@ const cleanupExpiredCache = () => {
 
     const users = fs.readdirSync(cacheDir);
     users.forEach((userId) => {
+      // Skip .gitkeep file
+      if (userId === '.gitkeep') {
+        return;
+      }
+      
       const userDir = path.join(cacheDir, userId);
-      cleanupUserCache(userDir);
+      
+      // Check if it's actually a directory before processing
+      if (fs.existsSync(userDir) && fs.statSync(userDir).isDirectory()) {
+        cleanupUserCache(userDir);
 
-      // Remove empty user directories (excluding .gitkeep files)
-      if (fs.existsSync(userDir)) {
+        // Remove empty user directories (excluding .gitkeep files)
         const files = fs.readdirSync(userDir);
         const nonGitkeepFiles = files.filter(file => file !== '.gitkeep');
         

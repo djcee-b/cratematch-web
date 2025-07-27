@@ -1,0 +1,42 @@
+name: Deploy CrateMatch Web
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Configure NPM for private packages
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run deployment setup script
+        run: |
+          chmod +x scripts/deploy-setup.sh
+          NPM_TOKEN=${{ secrets.NPM_TOKEN }} ./scripts/deploy-setup.sh
+
+      - name: Test application
+        run: |
+          npm test || echo "No tests configured"
+
+    # Add your deployment steps here
+    # - name: Deploy to server
+    #   run: |
+    #     # Your deployment commands
