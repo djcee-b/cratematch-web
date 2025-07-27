@@ -441,6 +441,9 @@ async function processPlaylist() {
     const progressContainer = document.getElementById("progress-container");
     if (progressContainer) {
       progressContainer.style.display = "block";
+      console.log("Progress container shown");
+    } else {
+      console.error("Progress container not found!");
     }
 
     // Create EventSource for progress updates with auth token in URL
@@ -455,10 +458,13 @@ async function processPlaylist() {
 
     eventSource.onopen = function () {
       console.log("EventSource connection opened");
+      console.log("EventSource readyState:", eventSource.readyState);
     };
 
     eventSource.onmessage = function (event) {
       console.log("EventSource message received:", event.data);
+      console.log("EventSource event type:", event.type);
+      console.log("EventSource readyState:", eventSource.readyState);
 
       try {
         const data = JSON.parse(event.data);
@@ -469,10 +475,24 @@ async function processPlaylist() {
           console.log(`Updating progress to: ${percentage}%`);
           const progressFill = document.getElementById("progress-fill");
           const progressText = document.getElementById("progress-text");
-          if (progressFill) progressFill.style.width = `${percentage}%`;
-          if (progressText)
+
+          console.log("Progress fill element:", progressFill);
+          console.log("Progress text element:", progressText);
+
+          if (progressFill) {
+            progressFill.style.width = `${percentage}%`;
+            console.log(`Set progress fill width to: ${percentage}%`);
+          } else {
+            console.error("Progress fill element not found!");
+          }
+
+          if (progressText) {
             progressText.textContent =
               data.message || `Processing... ${percentage}%`;
+            console.log(`Set progress text to: ${progressText.textContent}`);
+          } else {
+            console.error("Progress text element not found!");
+          }
         } else if (data.type === "complete") {
           console.log("Processing complete:", data);
           eventSource.close();
@@ -1280,14 +1300,25 @@ function showTextList(type) {
 
   // Get missing tracks data
   if (type === "missing") {
-    if (results.missingTracksDetailed && Array.isArray(results.missingTracksDetailed)) {
+    if (
+      results.missingTracksDetailed &&
+      Array.isArray(results.missingTracksDetailed)
+    ) {
       tracks = results.missingTracksDetailed;
-    } else if (results.missingTracksList && Array.isArray(results.missingTracksList)) {
+    } else if (
+      results.missingTracksList &&
+      Array.isArray(results.missingTracksList)
+    ) {
       tracks = results.missingTracksList;
-    } else if (results.unmatchedTracks && Array.isArray(results.unmatchedTracks)) {
+    } else if (
+      results.unmatchedTracks &&
+      Array.isArray(results.unmatchedTracks)
+    ) {
       tracks = results.unmatchedTracks;
     } else if (results.tracks && Array.isArray(results.tracks)) {
-      tracks = results.tracks.filter(t => !t.found && !t.matched && t.status !== "found");
+      tracks = results.tracks.filter(
+        (t) => !t.found && !t.matched && t.status !== "found"
+      );
     }
   }
 
@@ -1297,45 +1328,69 @@ function showTextList(type) {
   }
 
   // Generate text list
-  const textList = tracks.map(track => {
-    const trackName = track.name || track.title || track.spotifyTrack || track.spotify || track.trackName || track.spotify_name || track.spotifyName || "Unknown";
-    const artist = (track.artist || track.spotifyArtist || track.spotify_artist || track.trackArtist || track.spotify_artist_name || track.spotifyArtistName || "Unknown").replace(/\b\w/g, l => l.toUpperCase());
-    return `${trackName} - ${artist}`;
-  }).join('\n');
+  const textList = tracks
+    .map((track) => {
+      const trackName =
+        track.name ||
+        track.title ||
+        track.spotifyTrack ||
+        track.spotify ||
+        track.trackName ||
+        track.spotify_name ||
+        track.spotifyName ||
+        "Unknown";
+      const artist = (
+        track.artist ||
+        track.spotifyArtist ||
+        track.spotify_artist ||
+        track.trackArtist ||
+        track.spotify_artist_name ||
+        track.spotifyArtistName ||
+        "Unknown"
+      ).replace(/\b\w/g, (l) => l.toUpperCase());
+      return `${trackName} - ${artist}`;
+    })
+    .join("\n");
 
   // Update modal content
-  document.getElementById('text-list-tracks').textContent = textList;
-  
+  document.getElementById("text-list-tracks").textContent = textList;
+
   // Show modal
-  document.getElementById('text-list-modal').classList.add('show');
+  document.getElementById("text-list-modal").classList.add("show");
 
   // Setup copy functionality
-  document.getElementById('text-list-copy').onclick = () => {
-    navigator.clipboard.writeText(textList).then(() => {
-      const copyBtn = document.getElementById('text-list-copy');
-      const originalText = copyBtn.textContent;
-      copyBtn.textContent = '✅ Copied!';
-      copyBtn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
-      
-      setTimeout(() => {
-        copyBtn.textContent = originalText;
-        copyBtn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
-      }, 2000);
-    }).catch(err => {
-      console.error('Failed to copy text: ', err);
-      alert('Failed to copy to clipboard. Please select and copy the text manually.');
-    });
+  document.getElementById("text-list-copy").onclick = () => {
+    navigator.clipboard
+      .writeText(textList)
+      .then(() => {
+        const copyBtn = document.getElementById("text-list-copy");
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = "✅ Copied!";
+        copyBtn.style.background = "linear-gradient(135deg, #22c55e, #16a34a)";
+
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+          copyBtn.style.background =
+            "linear-gradient(135deg, #22c55e, #16a34a)";
+        }, 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy text: ", err);
+        alert(
+          "Failed to copy to clipboard. Please select and copy the text manually."
+        );
+      });
   };
 
   // Setup close functionality
-  document.getElementById('text-list-close').onclick = () => {
-    document.getElementById('text-list-modal').classList.remove('show');
+  document.getElementById("text-list-close").onclick = () => {
+    document.getElementById("text-list-modal").classList.remove("show");
   };
 
   // Close on outside click
-  document.getElementById('text-list-modal').onclick = (e) => {
-    if (e.target === document.getElementById('text-list-modal')) {
-      document.getElementById('text-list-modal').classList.remove('show');
+  document.getElementById("text-list-modal").onclick = (e) => {
+    if (e.target === document.getElementById("text-list-modal")) {
+      document.getElementById("text-list-modal").classList.remove("show");
     }
   };
 }
