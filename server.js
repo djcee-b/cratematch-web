@@ -1008,7 +1008,7 @@ app.get(
       res.write(
         `data: ${JSON.stringify({
           type: "progress",
-          progress: 0,
+          progress: 5,
           message: "Loading database...",
         })}\n\n`
       );
@@ -1023,7 +1023,7 @@ app.get(
       res.write(
         `data: ${JSON.stringify({
           type: "progress",
-          progress: 10,
+          progress: 15,
           message: "Database loaded, starting playlist processing...",
         })}\n\n`
       );
@@ -1058,6 +1058,10 @@ app.get(
           }
         }
       }, 3000); // Check every 3 seconds
+
+      // Track progress stages for better granular updates
+      let progressStage = 0;
+      const totalStages = 8; // Approximate number of major processing stages
 
       // Process the playlist with progress updates
       const results = await importSpotifyPlaylist(
@@ -1133,8 +1137,25 @@ app.get(
             // Fallback for other formats
             progressPercent = 50;
             message =
+              progress?.message ||
+              progress?.status ||
               progress ||
               `Processing playlist... ${Math.round(progressPercent)}%`;
+          }
+
+          // Ensure we always have a valid progress percentage
+          if (
+            progressPercent === null ||
+            progressPercent === undefined ||
+            isNaN(progressPercent)
+          ) {
+            // Use stage-based progress instead of defaulting to 50%
+            progressStage++;
+            const stageProgress = Math.min(
+              85,
+              15 + (progressStage / totalStages) * 70
+            );
+            progressPercent = Math.round(stageProgress);
           }
 
           console.log(`Sending progress: ${progressPercent}% - ${message}`);
@@ -1692,18 +1713,18 @@ const server = app.listen(PORT, () => {
 });
 
 // Graceful shutdown handling
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully...');
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received, shutting down gracefully...");
   server.close(() => {
-    console.log('Server closed');
+    console.log("Server closed");
     process.exit(0);
   });
 });
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully...');
+process.on("SIGINT", () => {
+  console.log("SIGINT received, shutting down gracefully...");
   server.close(() => {
-    console.log('Server closed');
+    console.log("Server closed");
     process.exit(0);
   });
 });
