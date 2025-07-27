@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "build": "bash scripts/build.sh",
-    "setup": "bash scripts/setup-public.sh"
+    "setup": "bash scripts/setup-public.sh",
+    "postinstall": "bash scripts/copy-public.sh"
   },
   "dependencies": {
     "@musiclibrarytools/mlt.js": "^5.1.13",

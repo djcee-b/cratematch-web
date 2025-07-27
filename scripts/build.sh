@@ -68,4 +68,35 @@ if [ "$SOURCE_PUBLIC_FILES" -gt 0 ] && [ "$PUBLIC_FILES" -eq 0 ]; then
     cp -r public/* public/ 2>/dev/null || echo "⚠️  Copy operation not needed"
 fi
 
+# CRITICAL FIX: Copy public files from source to deployment location
+echo "🔧 CRITICAL: Ensuring public files are available for deployment..."
+CURRENT_DIR=$(pwd)
+echo "Current working directory: $CURRENT_DIR"
+
+# List all files in current directory to understand the structure
+echo "📂 Current directory contents:"
+ls -la
+
+# Check if we're in a workspace environment and need to copy files
+if [ -d "/workspace" ]; then
+    echo "🔧 Detected workspace environment - copying public files..."
+    
+    # Copy public files from source to workspace
+    if [ -d "$CURRENT_DIR/public" ]; then
+        echo "📄 Copying public files from $CURRENT_DIR/public to /workspace/public"
+        cp -r "$CURRENT_DIR/public/"* "/workspace/public/" 2>/dev/null || {
+            echo "⚠️  Copy failed, trying alternative approach..."
+            # Try creating the directory first
+            mkdir -p "/workspace/public"
+            cp -r "$CURRENT_DIR/public/"* "/workspace/public/"
+        }
+        
+        # Verify the copy
+        echo "✅ Files copied. Contents of /workspace/public:"
+        ls -la "/workspace/public/"
+    else
+        echo "❌ Source public directory not found at $CURRENT_DIR/public"
+    fi
+fi
+
 echo "🎉 Build completed successfully!" 

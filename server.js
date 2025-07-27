@@ -31,7 +31,7 @@ if (fs.existsSync(publicPath)) {
   files.forEach((file) => {
     console.log(`  - ${file}`);
   });
-  
+
   if (files.length > 0) {
     app.use(express.static(publicPath));
     staticServed = true;
@@ -54,7 +54,9 @@ if (!staticServed) {
     if (fs.existsSync(altPath)) {
       const files = fs.readdirSync(altPath);
       if (files.length > 0) {
-        console.log(`✅ Found public directory at: ${altPath} with ${files.length} files`);
+        console.log(
+          `✅ Found public directory at: ${altPath} with ${files.length} files`
+        );
         app.use(express.static(altPath));
         staticServed = true;
         break;
@@ -1271,6 +1273,20 @@ app.post("/cleanup-temp-databases", requireAuth, async (req, res) => {
   }
 });
 
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || "development",
+    publicFiles: {
+      exists: fs.existsSync(path.join(__dirname, "public")),
+      files: fs.existsSync(path.join(__dirname, "public")) ? fs.readdirSync(path.join(__dirname, "public")).length : 0
+    }
+  });
+});
+
 // Serve the onboarding page
 app.get("/onboarding", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "onboarding.html"));
@@ -1281,7 +1297,7 @@ app.get("/", (req, res) => {
   const indexPath = path.join(__dirname, "public", "index.html");
   console.log(`🔍 Serving index.html from: ${indexPath}`);
   console.log(`📄 File exists: ${fs.existsSync(indexPath)}`);
-  
+
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
@@ -1289,32 +1305,80 @@ app.get("/", (req, res) => {
     const altPaths = [
       path.join(process.cwd(), "public", "index.html"),
       "/workspace/public/index.html",
-      "/app/public/index.html"
+      "/app/public/index.html",
     ];
-    
+
     for (const altPath of altPaths) {
       if (fs.existsSync(altPath)) {
         console.log(`✅ Found index.html at: ${altPath}`);
         return res.sendFile(altPath);
       }
     }
-    
+
     console.log(`❌ index.html not found in any location`);
-    res.status(404).send(`
-      <html>
-        <head><title>CrateMatch Web - Setup Required</title></head>
-        <body>
-          <h1>CrateMatch Web</h1>
-          <p>The application is running but the public files are not properly deployed.</p>
-          <p>Please check the deployment configuration.</p>
-          <p>Expected locations:</p>
-          <ul>
-            <li>${path.join(__dirname, "public", "index.html")}</li>
-            <li>${path.join(process.cwd(), "public", "index.html")}</li>
-            <li>/workspace/public/index.html</li>
-            <li>/app/public/index.html</li>
-          </ul>
-        </body>
+
+    // Fallback: Serve a basic HTML page
+    console.log(`🔄 Serving fallback HTML page`);
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>CrateMatch Web</title>
+          <style>
+              body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+              .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+              h1 { color: #333; text-align: center; }
+              .status { background: #e8f5e8; border: 1px solid #4caf50; padding: 15px; border-radius: 5px; margin: 20px 0; }
+              .warning { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0; }
+              .error { background: #f8d7da; border: 1px solid #dc3545; padding: 15px; border-radius: 5px; margin: 20px 0; }
+              .btn { background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 5px; }
+              .btn:hover { background: #0056b3; }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <h1>🎵 CrateMatch Web</h1>
+              
+              <div class="status">
+                  <h3>✅ Server Status: Running</h3>
+                  <p>The CrateMatch Web server is running successfully on port ${PORT}.</p>
+              </div>
+              
+              <div class="warning">
+                  <h3>⚠️ Static Files Issue</h3>
+                  <p>The public files (HTML, CSS, JS) are not properly deployed. This is a deployment configuration issue.</p>
+                  <p><strong>Expected locations:</strong></p>
+                  <ul>
+                      <li>${path.join(__dirname, "public", "index.html")}</li>
+                      <li>${path.join(
+                        process.cwd(),
+                        "public",
+                        "index.html"
+                      )}</li>
+                      <li>/workspace/public/index.html</li>
+                      <li>/app/public/index.html</li>
+                  </ul>
+              </div>
+              
+              <div class="error">
+                  <h3>🔧 Next Steps</h3>
+                  <p>To fix this issue:</p>
+                  <ol>
+                      <li>Check the deployment logs for the build process</li>
+                      <li>Ensure the public directory is included in the deployment</li>
+                      <li>Verify the build script is copying files correctly</li>
+                      <li>Redeploy the application</li>
+                  </ol>
+              </div>
+              
+              <div style="text-align: center; margin-top: 30px;">
+                  <a href="/api/health" class="btn">Check API Health</a>
+                  <a href="/onboarding" class="btn">Try Onboarding</a>
+              </div>
+          </div>
+      </body>
       </html>
     `);
   }
