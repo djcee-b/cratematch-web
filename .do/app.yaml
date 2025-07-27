@@ -5,7 +5,7 @@ services:
     github:
       repo: djcee-b/cratematch-web
       branch: main
-    run_command: npm start
+    run_command: npm run build && npm start
     environment_slug: node-js
     instance_count: 1
     instance_size_slug: basic-xxs

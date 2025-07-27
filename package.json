@@ -4,8 +4,9 @@
   "description": "Web version of CrateMatch - Spotify playlist to Serato crate converter",
   "main": "server.js",
   "scripts": {
-    "start": "bash scripts/setup-public.sh && node server.js",
+    "start": "node server.js",
     "dev": "nodemon server.js",
+    "build": "bash scripts/build.sh",
     "setup": "bash scripts/setup-public.sh"
   },
   "dependencies": {

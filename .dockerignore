@@ -8,6 +8,5 @@ README.md
 coverage
 .DS_Store
 *.log
-uploads/
-crates/
-# Don't ignore public files - they're needed for the app to work 
+# Don't ignore public files - they're needed for the app to work
+# Don't ignore uploads and crates directories - they're created at runtime 
