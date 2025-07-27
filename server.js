@@ -983,6 +983,8 @@ app.get(
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
+        "Transfer-Encoding": "chunked",
+        "Content-Encoding": "none",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Cache-Control",
       });
