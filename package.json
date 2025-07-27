@@ -11,7 +11,7 @@
     "postinstall": "bash scripts/copy-public.sh"
   },
   "dependencies": {
-    "@musiclibrarytools/mlt.js": "^5.1.16",
+    "@musiclibrarytools/mlt.js": "^5.1.17",
     "@musiclibrarytools/serato.js": "^1.0.0",
     "@supabase/supabase-js": "^2.39.0",
     "cors": "^2.8.5",

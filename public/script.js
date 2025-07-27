@@ -700,16 +700,22 @@ function generateTrackTable(tracks, type) {
       let variationsPopup = "";
 
       if (type === "found" && track.versions && track.versions.length > 0) {
+        // Debug: Log the first track's data
+        if (index === 0) {
+          console.log("First track data:", track);
+          console.log("First version data:", track.versions[0]);
+        }
+        
         if (track.versions.length === 1) {
           seratoTrack = {
-            title: track.versions[0].originalSeratoTitle,
-            artist: track.versions[0].originalSeratoArtist,
+            title: track.versions[0].originalSeratoTitle || track.versions[0].title || "Unknown Title",
+            artist: track.versions[0].originalSeratoArtist || track.versions[0].artist || "Unknown Artist",
           };
         } else {
           // Show first variation with popup for others
           seratoTrack = {
-            title: track.versions[0].originalSeratoTitle,
-            artist: track.versions[0].originalSeratoArtist,
+            title: track.versions[0].originalSeratoTitle || track.versions[0].title || "Unknown Title",
+            artist: track.versions[0].originalSeratoArtist || track.versions[0].artist || "Unknown Artist",
           };
           variationsPopup = `
                 <div class="variations-popup">
@@ -719,7 +725,7 @@ function generateTrackTable(tracks, type) {
                   ${track.versions
                     .map(
                       (v) =>
-                        `<div class="variations-popup-item">${v.originalSeratoTitle} - ${v.originalSeratoArtist}</div>`
+                        `<div class="variations-popup-item">${v.originalSeratoTitle || v.title || "Unknown Title"} - ${v.originalSeratoArtist || v.artist || "Unknown Artist"}</div>`
                     )
                     .join("")}
                 </div>

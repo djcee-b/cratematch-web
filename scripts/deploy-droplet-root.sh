@@ -87,6 +87,9 @@ fi
 
 # Install dependencies
 print_status "Installing Node.js dependencies..."
+print_status "Setting up npm authentication for private packages..."
+./scripts/setup-npm-auth.sh
+print_status "Installing dependencies..."
 npm install
 
 # Set up environment file
