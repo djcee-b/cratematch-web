@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const cors = require("cors");
@@ -1037,8 +1038,10 @@ app.get(
           // Check if session is still active
           const currentSession = activeSessions.get(sessionId);
           if (!currentSession || !currentSession.isActive) {
-            console.log(`Session ${sessionId} is no longer active, stopping processing`);
-            throw new Error('Client disconnected');
+            console.log(
+              `Session ${sessionId} is no longer active, stopping processing`
+            );
+            throw new Error("Client disconnected");
           }
 
           console.log("Progress callback received:", progress);
@@ -1095,7 +1098,7 @@ app.get(
           // Check again before sending
           const sessionCheck = activeSessions.get(sessionId);
           if (!sessionCheck || !sessionCheck.isActive) {
-            throw new Error('Client disconnected');
+            throw new Error("Client disconnected");
           }
 
           res.write(
@@ -1254,8 +1257,10 @@ app.get(
       activeSessions.delete(sessionId);
 
       // Check if this was a client disconnect
-      if (error.message === 'Client disconnected') {
-        console.log(`Processing stopped due to client disconnect for session: ${sessionId}`);
+      if (error.message === "Client disconnected") {
+        console.log(
+          `Processing stopped due to client disconnect for session: ${sessionId}`
+        );
         return; // Don't send error response since client is gone
       }
 
