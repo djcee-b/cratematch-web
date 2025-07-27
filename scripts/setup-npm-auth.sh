@@ -58,8 +58,6 @@ fi
 print_status "Creating .npmrc file..."
 cat > .npmrc << EOF
 registry=https://registry.npmjs.org/
-@musiclibrarytools:registry=https://npm.pkg.github.com/
-//npm.pkg.github.com/:_authToken=\${NPM_TOKEN}
 EOF
 
 # Set proper permissions
