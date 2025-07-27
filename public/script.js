@@ -13,6 +13,10 @@ const settingsBtn = document.getElementById("settings-btn");
 const signOutBtn = document.getElementById("sign-out-btn");
 const databaseDate = document.getElementById("database-date");
 
+// Upgrade elements
+const upgradeBanner = document.getElementById("upgrade-banner");
+const upgradeBtnBanner = document.getElementById("upgrade-btn-banner");
+
 // Database status bar elements
 const databaseStatusBar = document.getElementById("database-status-bar");
 const statusText = document.querySelector(".status-text");
@@ -76,7 +80,7 @@ async function checkAuth() {
       }
 
       loadUserDatabases();
-      
+
       // Hide loading overlay after successful auth
       hideLoadingOverlay();
     } else {
@@ -132,18 +136,34 @@ function updateUserInterface(data) {
     case "trial":
       statusText = "Free Trial";
       statusClass = "trial";
+      // Show upgrade banner for trial users
+      if (upgradeBanner) {
+        upgradeBanner.style.display = "block";
+      }
       break;
     case "premium":
       statusText = "Premium";
       statusClass = "active";
+      // Hide upgrade banner for premium users
+      if (upgradeBanner) {
+        upgradeBanner.style.display = "none";
+      }
       break;
     case "free":
       statusText = "Free";
       statusClass = "free";
+      // Show upgrade banner for free users
+      if (upgradeBanner) {
+        upgradeBanner.style.display = "block";
+      }
       break;
     default:
       statusText = "Free";
       statusClass = "free";
+      // Show upgrade banner for free users
+      if (upgradeBanner) {
+        upgradeBanner.style.display = "block";
+      }
   }
 
   subscriptionStatus.textContent = statusText;
@@ -746,4 +766,14 @@ document.addEventListener("DOMContentLoaded", () => {
   
   checkAuth();
   setupSettings();
+  setupUpgradeButton();
 });
+
+// Setup upgrade button
+function setupUpgradeButton() {
+  if (upgradeBtnBanner) {
+    upgradeBtnBanner.addEventListener("click", () => {
+      window.location.href = "/pricing.html";
+    });
+  }
+}

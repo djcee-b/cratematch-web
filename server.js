@@ -3,6 +3,7 @@ const multer = require("multer");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { importSpotifyPlaylist } = require("@musiclibrarytools/mlt.js");
 const {
   authOperations,
@@ -1291,6 +1292,125 @@ app.get("/api/health", (req, res) => {
 app.get("/onboarding", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "onboarding.html"));
 });
+
+// Serve pricing page
+app.get("/pricing.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "pricing.html"));
+});
+
+// Stripe Configuration
+app.get("/api/stripe/config", requireAuth, (req, res) => {
+  res.json({
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+  });
+});
+
+// Create Payment Intent
+app.post("/api/stripe/create-payment-intent", requireAuth, async (req, res) => {
+  try {
+    const { planType, amount } = req.body;
+    const userId = req.user.id;
+
+    // Create payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount,
+      currency: 'gbp',
+      metadata: {
+        userId: userId,
+        planType: planType,
+      },
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+    });
+  } catch (error) {
+    console.error('Error creating payment intent:', error);
+    res.status(500).json({ error: 'Failed to create payment intent' });
+  }
+});
+
+// Stripe Webhook
+app.post("/api/stripe/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      const paymentIntent = event.data.object;
+      await handlePaymentSuccess(paymentIntent);
+      break;
+    case 'payment_intent.payment_failed':
+      const failedPayment = event.data.object;
+      await handlePaymentFailure(failedPayment);
+      break;
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+
+  res.json({ received: true });
+});
+
+// Handle successful payment
+async function handlePaymentSuccess(paymentIntent) {
+  try {
+    const { userId, planType } = paymentIntent.metadata;
+    
+    // Update user subscription in database
+    const updateData = {
+      role: "premium",
+      subscription_type: planType,
+      subscription_start: new Date().toISOString(),
+      subscription_end: getSubscriptionEndDate(planType),
+      trial_start: null,
+      trial_end: null,
+      last_seen: new Date().toISOString(),
+    };
+
+    const { data, error } = await machineOperations.updateMachine(userId, updateData);
+    
+    if (error) {
+      console.error('Error updating user subscription:', error);
+    } else {
+      console.log('User subscription updated successfully:', data);
+    }
+  } catch (error) {
+    console.error('Error handling payment success:', error);
+  }
+}
+
+// Handle payment failure
+async function handlePaymentFailure(paymentIntent) {
+  console.log('Payment failed:', paymentIntent.id);
+  // You can add additional logic here like sending emails, etc.
+}
+
+// Get subscription end date based on plan type
+function getSubscriptionEndDate(planType) {
+  const now = new Date();
+  
+  switch (planType) {
+    case 'monthly':
+      return new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString();
+    case 'yearly':
+      return new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString();
+    case 'lifetime':
+      // Lifetime plans don't expire - set to 50 years from now
+      return new Date(now.getFullYear() + 50, now.getMonth(), now.getDate()).toISOString();
+    default:
+      return new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString();
+  }
+}
 
 // Serve the main application
 app.get("/", (req, res) => {

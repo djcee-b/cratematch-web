@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrateMatch - Pricing</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Loading overlay to prevent flash -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <h3>Loading CrateMatch...</h3>
+      <p>Checking your session...</p>
+    </div>
+  </div>
+
+  <!-- Header with user info -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <h1>CrateMatch <span class="beta-label">beta</span></h1>
+      </div>
+      <div class="user-info" id="user-info" style="display: none;">
+        <div class="user-details">
+          <span class="user-email" id="user-email"></span>
+          <span class="subscription-status" id="subscription-status"></span>
+        </div>
+        <button class="settings-btn" id="settings-btn">Settings</button>
+        <button class="sign-out-btn" id="sign-out-btn">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <div class="pricing-container">
+      <div class="pricing-header">
+        <h2>Choose Your Plan</h2>
+        <p>Unlock unlimited exports and advanced features</p>
+      </div>
+      
+      <div class="pricing-options">
+        <div class="pricing-option monthly-option">
+          <div class="plan-header">
+            <div class="plan-name">Monthly</div>
+            <div class="plan-price" data-price="2.99" data-currency="GBP">£2.99</div>
+            <div class="plan-period">per month</div>
+          </div>
+          <ul class="plan-features">
+            <li class="feature-highlight">Unlimited exports</li>
+            <li class="feature-highlight">1000 track playlists</li>
+            <li>View Import History</li>
+            <li>See all track variations for every playlist</li>
+          </ul>
+          <button class="upgrade-btn monthly-btn" id="monthly-plan-btn" data-plan="monthly">
+            Start Free Trial
+          </button>
+        </div>
+        
+        <div class="pricing-option yearly-option">
+          <div class="plan-header">
+            <div class="plan-name">Yearly</div>
+            <div class="plan-price" data-price="24.99" data-currency="GBP">£24.99</div>
+            <div class="plan-period">per year</div>
+            <div class="plan-savings">Save 30%</div>
+          </div>
+          <ul class="plan-features">
+            <li class="feature-highlight">Unlimited exports</li>
+            <li class="feature-highlight">1000 track playlists</li>
+            <li>View Import History</li>
+            <li>See all track variations for every playlist</li>
+          </ul>
+          <button class="upgrade-btn yearly-btn" id="yearly-plan-btn" data-plan="yearly">
+            Start Free Trial
+          </button>
+        </div>
+        
+        <div class="pricing-option lifetime-option">
+          <div class="plan-header">
+            <div class="plan-name">Lifetime</div>
+            <div class="plan-price" data-price="34.99" data-currency="GBP">£34.99</div>
+            <div class="plan-period">one-time payment</div>
+            <div class="plan-savings">Best Value</div>
+          </div>
+          <ul class="plan-features">
+            <li class="feature-highlight">Unlimited exports</li>
+            <li class="feature-highlight">1000 track playlists</li>
+            <li>View Import History</li>
+            <li>See all track variations for every playlist</li>
+            <li>Lifetime access</li>
+          </ul>
+          <button class="upgrade-btn lifetime-btn" id="lifetime-plan-btn" data-plan="lifetime">
+            Get Lifetime Access
+          </button>
+        </div>
+      </div>
+      
+      <div class="pricing-footer">
+        <p>All plans include a 7-day free trial • Cancel anytime</p>
+        <div class="pricing-links">
+          <a href="/" class="back-link">← Back to App</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Payment Modal -->
+  <div class="modal-overlay" id="payment-modal" style="display: none;">
+    <div class="modal payment-modal">
+      <div class="modal-header">
+        <h3>Complete Your Purchase</h3>
+        <button class="modal-close" id="payment-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="payment-summary">
+          <div class="selected-plan" id="selected-plan-info">
+            <!-- Plan info will be populated here -->
+          </div>
+          <div class="payment-form" id="payment-form">
+            <!-- Stripe payment form will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal-overlay" id="success-modal" style="display: none;">
+    <div class="modal success-modal">
+      <div class="modal-header">
+        <h3>Payment Successful!</h3>
+        <button class="modal-close" id="success-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="success-content">
+          <div class="success-icon">✅</div>
+          <h4>Welcome to CrateMatch Pro!</h4>
+          <p>Your subscription has been activated. You now have access to unlimited exports and all premium features.</p>
+          <div class="success-features">
+            <div class="feature-item">
+              <span class="feature-icon">🎵</span>
+              <span>Unlimited playlist exports</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">📊</span>
+              <span>Import history tracking</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🔍</span>
+              <span>Advanced track matching</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="primary-btn" id="success-continue-btn">Continue to App</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="pricing.js"></script>
+</body>
+</html> 
