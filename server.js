@@ -17,7 +17,35 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
+
+// Enhanced static file serving with logging
+const publicPath = path.join(__dirname, "public");
+console.log(`📁 Public directory path: ${publicPath}`);
+console.log(`📁 Public directory exists: ${fs.existsSync(publicPath)}`);
+
+if (fs.existsSync(publicPath)) {
+  console.log(`📄 Public directory contents:`);
+  fs.readdirSync(publicPath).forEach((file) => {
+    console.log(`  - ${file}`);
+  });
+  app.use(express.static(publicPath));
+} else {
+  console.log(`❌ Public directory not found at: ${publicPath}`);
+  // Try alternative paths for different deployment environments
+  const altPaths = [
+    path.join(process.cwd(), "public"),
+    "/workspace/public",
+    "/app/public",
+  ];
+
+  for (const altPath of altPaths) {
+    if (fs.existsSync(altPath)) {
+      console.log(`✅ Found public directory at: ${altPath}`);
+      app.use(express.static(altPath));
+      break;
+    }
+  }
+}
 
 // Create necessary directories
 const uploadsDir = path.join(__dirname, "uploads");
@@ -138,12 +166,12 @@ const cleanupExpiredCache = () => {
         files.forEach((file) => {
           const filePath = path.join(userDir, file);
           const stats = fs.statSync(filePath);
-          
+
           // Skip .gitkeep files and only process regular files
-          if (file === '.gitkeep' || stats.isDirectory()) {
+          if (file === ".gitkeep" || stats.isDirectory()) {
             return;
           }
-          
+
           const fileAge = now.getTime() - stats.mtime.getTime();
 
           if (fileAge > maxAge) {
@@ -157,20 +185,20 @@ const cleanupExpiredCache = () => {
     const users = fs.readdirSync(cacheDir);
     users.forEach((userId) => {
       // Skip .gitkeep file
-      if (userId === '.gitkeep') {
+      if (userId === ".gitkeep") {
         return;
       }
-      
+
       const userDir = path.join(cacheDir, userId);
-      
+
       // Check if it's actually a directory before processing
       if (fs.existsSync(userDir) && fs.statSync(userDir).isDirectory()) {
         cleanupUserCache(userDir);
 
         // Remove empty user directories (excluding .gitkeep files)
         const files = fs.readdirSync(userDir);
-        const nonGitkeepFiles = files.filter(file => file !== '.gitkeep');
-        
+        const nonGitkeepFiles = files.filter((file) => file !== ".gitkeep");
+
         if (nonGitkeepFiles.length === 0) {
           fs.rmdirSync(userDir);
           console.log(`Removed empty cache directory: ${userDir}`);
@@ -677,8 +705,14 @@ app.post(
 
       // Check if this is a free user limitation error
       let errorMessage = error.message || "Please try again";
-      if (error.message && error.message.includes("Free users are limited to importing playlists with 50 tracks or fewer")) {
-        errorMessage = "Free users can only process playlists with 50 tracks or fewer. Please upgrade to Premium for unlimited processing.";
+      if (
+        error.message &&
+        error.message.includes(
+          "Free users are limited to importing playlists with 50 tracks or fewer"
+        )
+      ) {
+        errorMessage =
+          "Free users can only process playlists with 50 tracks or fewer. Please upgrade to Premium for unlimited processing.";
       }
 
       res.status(500).json({
@@ -885,8 +919,11 @@ app.get(
             message = `Processing playlist... ${Math.round(progressPercent)}%`;
           } else if (progress && typeof progress === "object") {
             // If progress is an object with percentage property
-            if (typeof progress.current === "number" && typeof progress.total === "number") {
-              progressPercent = progress.current / progress.total * 100;
+            if (
+              typeof progress.current === "number" &&
+              typeof progress.total === "number"
+            ) {
+              progressPercent = (progress.current / progress.total) * 100;
             } else if (progress.percentage !== undefined) {
               progressPercent = Math.min(90, Math.max(10, progress.percentage));
             } else if (progress.progress !== undefined) {
@@ -1089,8 +1126,14 @@ app.get(
 
       // Check if this is a free user limitation error
       let errorMessage = error.message || "Please try again";
-      if (error.message && error.message.includes("Free users are limited to importing playlists with 50 tracks or fewer")) {
-        errorMessage = "Free users can only process playlists with 50 tracks or fewer. Please upgrade to Premium for unlimited processing.";
+      if (
+        error.message &&
+        error.message.includes(
+          "Free users are limited to importing playlists with 50 tracks or fewer"
+        )
+      ) {
+        errorMessage =
+          "Free users can only process playlists with 50 tracks or fewer. Please upgrade to Premium for unlimited processing.";
       }
 
       res.write(
@@ -1213,7 +1256,46 @@ app.get("/onboarding", (req, res) => {
 
 // Serve the main application
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  const indexPath = path.join(__dirname, "public", "index.html");
+  console.log(`🔍 Serving index.html from: ${indexPath}`);
+  console.log(`📄 File exists: ${fs.existsSync(indexPath)}`);
+  
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    // Try alternative paths
+    const altPaths = [
+      path.join(process.cwd(), "public", "index.html"),
+      "/workspace/public/index.html",
+      "/app/public/index.html"
+    ];
+    
+    for (const altPath of altPaths) {
+      if (fs.existsSync(altPath)) {
+        console.log(`✅ Found index.html at: ${altPath}`);
+        return res.sendFile(altPath);
+      }
+    }
+    
+    console.log(`❌ index.html not found in any location`);
+    res.status(404).send(`
+      <html>
+        <head><title>CrateMatch Web - Setup Required</title></head>
+        <body>
+          <h1>CrateMatch Web</h1>
+          <p>The application is running but the public files are not properly deployed.</p>
+          <p>Please check the deployment configuration.</p>
+          <p>Expected locations:</p>
+          <ul>
+            <li>${path.join(__dirname, "public", "index.html")}</li>
+            <li>${path.join(process.cwd(), "public", "index.html")}</li>
+            <li>/workspace/public/index.html</li>
+            <li>/app/public/index.html</li>
+          </ul>
+        </body>
+      </html>
+    `);
+  }
 });
 
 app.listen(PORT, () => {

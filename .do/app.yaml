@@ -1,0 +1,22 @@
+name: cratematch-web
+services:
+  - name: web
+    source_dir: /
+    github:
+      repo: djcee-b/cratematch-web
+      branch: main
+    run_command: npm start
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: NPM_TOKEN
+        value: ${NPM_TOKEN}
+      - key: SUPABASE_URL
+        value: ${SUPABASE_URL}
+      - key: SUPABASE_ANON_KEY
+        value: ${SUPABASE_ANON_KEY}
