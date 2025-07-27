@@ -3,6 +3,7 @@ let currentUser = null;
 let authToken = null;
 
 // DOM elements
+const authLoadingOverlay = document.getElementById("auth-loading-overlay");
 const loginForm = document.getElementById("login-form");
 const signupForm = document.getElementById("signup-form");
 const forgotForm = document.getElementById("forgot-form");
@@ -46,6 +47,19 @@ async function checkAuthStatus() {
       console.error("Auth check error:", error);
       localStorage.removeItem("authToken");
     }
+  }
+  
+  // Hide loading overlay after auth check
+  hideAuthLoadingOverlay();
+}
+
+// Hide auth loading overlay with smooth transition
+function hideAuthLoadingOverlay() {
+  if (authLoadingOverlay) {
+    authLoadingOverlay.classList.add("hidden");
+    setTimeout(() => {
+      authLoadingOverlay.style.display = "none";
+    }, 300);
   }
 }
 
@@ -279,5 +293,13 @@ backToLoginBtn.addEventListener("click", () => {
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
+  // Add a timeout to prevent infinite loading
+  setTimeout(() => {
+    if (authLoadingOverlay && !authLoadingOverlay.classList.contains("hidden")) {
+      console.warn("Auth check taking too long, hiding loading overlay");
+      hideAuthLoadingOverlay();
+    }
+  }, 10000); // 10 second timeout
+  
   checkAuthStatus();
 });

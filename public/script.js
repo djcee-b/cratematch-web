@@ -5,6 +5,7 @@ let uploadedDatabase = null;
 let currentDatabaseFileName = null;
 
 // DOM elements
+const loadingOverlay = document.getElementById("loading-overlay");
 const userInfo = document.getElementById("user-info");
 const userEmail = document.getElementById("user-email");
 const subscriptionStatus = document.getElementById("subscription-status");
@@ -48,6 +49,7 @@ const subscriptionClose = document.getElementById("subscription-close");
 async function checkAuth() {
   const token = localStorage.getItem("authToken");
   if (!token) {
+    // No token, redirect to auth page
     window.location.href = "/auth.html";
     return;
   }
@@ -74,8 +76,11 @@ async function checkAuth() {
       }
 
       loadUserDatabases();
+      
+      // Hide loading overlay after successful auth
+      hideLoadingOverlay();
     } else {
-      // Token is invalid
+      // Token is invalid, redirect to auth page
       localStorage.removeItem("authToken");
       window.location.href = "/auth.html";
     }
@@ -83,6 +88,16 @@ async function checkAuth() {
     console.error("Auth check error:", error);
     localStorage.removeItem("authToken");
     window.location.href = "/auth.html";
+  }
+}
+
+// Hide loading overlay with smooth transition
+function hideLoadingOverlay() {
+  if (loadingOverlay) {
+    loadingOverlay.classList.add("hidden");
+    setTimeout(() => {
+      loadingOverlay.style.display = "none";
+    }, 300);
   }
 }
 
@@ -721,6 +736,14 @@ function showSettingsUploadStatus(message, type) {
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
+  // Add a timeout to prevent infinite loading
+  setTimeout(() => {
+    if (loadingOverlay && !loadingOverlay.classList.contains("hidden")) {
+      console.warn("Auth check taking too long, hiding loading overlay");
+      hideLoadingOverlay();
+    }
+  }, 10000); // 10 second timeout
+  
   checkAuth();
   setupSettings();
 });
