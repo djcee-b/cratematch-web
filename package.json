@@ -8,7 +8,7 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "@musiclibrarytools/mlt.js": "^5.1.14",
+    "@musiclibrarytools/mlt.js": "^5.1.13",
     "@musiclibrarytools/serato.js": "^1.0.0",
     "@supabase/supabase-js": "^2.39.0",
     "cors": "^2.8.5",
