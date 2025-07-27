@@ -2319,30 +2319,36 @@ body {
 }
 
 .progress-container {
-  max-width: 400px;
+  width: 100%;
+  max-width: 350px;
   margin: 0 auto;
 }
 
 .progress-bar {
   width: 100%;
-  height: 8px;
-  background-color: #e5e7eb;
-  border-radius: 4px;
+  height: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
   overflow: hidden;
   margin-bottom: 1rem;
+  position: relative;
 }
 
 .progress-fill {
   height: 100%;
-  background-color: #3b82f6;
-  border-radius: 4px;
-  transition: width 0.3s ease;
+  background: linear-gradient(135deg, #3b82f6, #22c55e);
+  border-radius: 8px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 0%;
+  position: relative;
 }
 
 .progress-text {
-  color: #6b7280;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
+  color: #3b82f6;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 /* Settings Page Styles */

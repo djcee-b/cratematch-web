@@ -437,13 +437,22 @@ async function processPlaylist() {
     // Show the processing overlay
     processingOverlay.style.display = "flex";
 
-    // Show progress container
+    // Show progress container and reset progress
     const progressContainer = document.getElementById("progress-container");
+    const progressFill = document.getElementById("progress-fill");
+    const progressText = document.getElementById("progress-text");
+
     if (progressContainer) {
       progressContainer.style.display = "block";
-      console.log("Progress container shown");
-    } else {
-      console.error("Progress container not found!");
+    }
+
+    // Reset progress to 0
+    if (progressFill) {
+      progressFill.style.width = "0%";
+    }
+
+    if (progressText) {
+      progressText.textContent = "Starting...";
     }
 
     // Create EventSource for progress updates with auth token in URL
@@ -458,40 +467,24 @@ async function processPlaylist() {
 
     eventSource.onopen = function () {
       console.log("EventSource connection opened");
-      console.log("EventSource readyState:", eventSource.readyState);
     };
 
     eventSource.onmessage = function (event) {
-      console.log("EventSource message received:", event.data);
-      console.log("EventSource event type:", event.type);
-      console.log("EventSource readyState:", eventSource.readyState);
-
       try {
         const data = JSON.parse(event.data);
-        console.log("Parsed data:", data);
 
         if (data.type === "progress") {
           const percentage = Math.round(data.progress);
-          console.log(`Updating progress to: ${percentage}%`);
           const progressFill = document.getElementById("progress-fill");
           const progressText = document.getElementById("progress-text");
 
-          console.log("Progress fill element:", progressFill);
-          console.log("Progress text element:", progressText);
-
           if (progressFill) {
             progressFill.style.width = `${percentage}%`;
-            console.log(`Set progress fill width to: ${percentage}%`);
-          } else {
-            console.error("Progress fill element not found!");
           }
 
           if (progressText) {
             progressText.textContent =
               data.message || `Processing... ${percentage}%`;
-            console.log(`Set progress text to: ${progressText.textContent}`);
-          } else {
-            console.error("Progress text element not found!");
           }
         } else if (data.type === "complete") {
           console.log("Processing complete:", data);
