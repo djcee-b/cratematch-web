@@ -3,6 +3,7 @@ const multer = require("multer");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { importSpotifyPlaylist } = require("@musiclibrarytools/mlt.js");
 const {
@@ -414,7 +415,7 @@ app.post("/auth/reset-password", async (req, res) => {
   }
 });
 
-// Get current user and subscription status
+// Get current user and subscription status (requires active subscription)
 app.get(
   "/auth/me",
   requireAuth,
@@ -445,6 +446,79 @@ app.get(
     }
   }
 );
+
+// Get current user for pricing page (doesn't require active subscription)
+app.get(
+  "/api/auth/verify",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const { data: machine, error } =
+        await machineOperations.getMachineByEmail(req.user.email);
+
+      if (error) {
+        return res.status(500).json({
+          error: "Failed to fetch user data",
+          message: "Please try again",
+        });
+      }
+
+      res.json({
+        user: req.user,
+        machine: machine,
+        subscriptionStatus: machine?.role || "trial",
+      });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({
+        error: "Failed to fetch user data",
+        message: "Please try again",
+      });
+    }
+  }
+);
+
+// Create Stripe Customer Portal session for subscription management
+app.post("/api/stripe/create-portal-session", requireAuth, async (req, res) => {
+  try {
+    const { data: machine, error } = await machineOperations.getMachineByEmail(req.user.email);
+    
+    if (error || !machine) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Get or create Stripe customer
+    let customer;
+    if (machine.stripe_customer_id) {
+      customer = await stripe.customers.retrieve(machine.stripe_customer_id);
+    } else {
+      // Create new customer
+      customer = await stripe.customers.create({
+        email: req.user.email,
+        metadata: {
+          user_id: req.user.id,
+          machine_id: machine.id
+        }
+      });
+      
+      // Update machine with Stripe customer ID
+      await machineOperations.updateMachine(machine.id, {
+        stripe_customer_id: customer.id
+      });
+    }
+
+    // Create portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customer.id,
+      return_url: `${process.env.WEBAPP_URL || 'http://localhost:3000'}/settings.html`,
+    });
+
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error('Error creating portal session:', error);
+    res.status(500).json({ error: 'Failed to create portal session' });
+  }
+});
 
 // Upload database to Supabase storage
 app.post(
@@ -1298,37 +1372,12 @@ app.get("/pricing.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "pricing.html"));
 });
 
-// Stripe Configuration
-app.get("/api/stripe/config", requireAuth, (req, res) => {
-  res.json({
-    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-  });
+// Serve settings page
+app.get("/settings.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "settings.html"));
 });
 
-// Create Payment Intent
-app.post("/api/stripe/create-payment-intent", requireAuth, async (req, res) => {
-  try {
-    const { planType, amount } = req.body;
-    const userId = req.user.id;
 
-    // Create payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount,
-      currency: 'gbp',
-      metadata: {
-        userId: userId,
-        planType: planType,
-      },
-    });
-
-    res.json({
-      clientSecret: paymentIntent.client_secret,
-    });
-  } catch (error) {
-    console.error('Error creating payment intent:', error);
-    res.status(500).json({ error: 'Failed to create payment intent' });
-  }
-});
 
 // Stripe Webhook
 app.post("/api/stripe/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
@@ -1346,13 +1395,13 @@ app.post("/api/stripe/webhook", express.raw({ type: 'application/json' }), async
 
   // Handle the event
   switch (event.type) {
-    case 'payment_intent.succeeded':
-      const paymentIntent = event.data.object;
-      await handlePaymentSuccess(paymentIntent);
+    case 'checkout.session.completed':
+      const session = event.data.object;
+      await handlePaymentSuccess(session);
       break;
-    case 'payment_intent.payment_failed':
-      const failedPayment = event.data.object;
-      await handlePaymentFailure(failedPayment);
+    case 'checkout.session.expired':
+      const expiredSession = event.data.object;
+      await handlePaymentFailure(expiredSession);
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);
@@ -1362,9 +1411,9 @@ app.post("/api/stripe/webhook", express.raw({ type: 'application/json' }), async
 });
 
 // Handle successful payment
-async function handlePaymentSuccess(paymentIntent) {
+async function handlePaymentSuccess(session) {
   try {
-    const { userId, planType } = paymentIntent.metadata;
+    const { userId, planType } = session.metadata;
     
     // Update user subscription in database
     const updateData = {
@@ -1390,8 +1439,8 @@ async function handlePaymentSuccess(paymentIntent) {
 }
 
 // Handle payment failure
-async function handlePaymentFailure(paymentIntent) {
-  console.log('Payment failed:', paymentIntent.id);
+async function handlePaymentFailure(session) {
+  console.log('Payment failed or expired:', session.id);
   // You can add additional logic here like sending emails, etc.
 }
 

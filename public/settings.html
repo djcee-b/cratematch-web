@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrateMatch - Settings & Subscriptions</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Loading overlay to prevent flash -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <h3>Loading CrateMatch...</h3>
+      <p>Checking your session...</p>
+    </div>
+  </div>
+
+  <!-- Header with user info -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <h1>CrateMatch <span class="beta-label">beta</span></h1>
+      </div>
+      <div class="user-info" id="user-info" style="display: none;">
+        <div class="user-details">
+          <span class="user-email" id="user-email"></span>
+          <span class="subscription-status" id="subscription-status"></span>
+        </div>
+        <button class="settings-btn" id="settings-btn">Settings</button>
+        <button class="sign-out-btn" id="sign-out-btn">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <div class="settings-container">
+      <div class="settings-header">
+        <h2>Settings & Subscriptions</h2>
+        <p>Manage your account and subscription</p>
+      </div>
+      
+      <div class="settings-content">
+        
+        <!-- Free User Subscription Info -->
+        <section class="settings-section" id="free-subscription-section" style="display: none;">
+          <div class="subscription-card free-card">
+            <div class="subscription-header">
+              <span class="subscription-badge free">FREE</span>
+              <h3>Free Plan</h3>
+            </div>
+            <div class="subscription-description">50 track Playlists • 1 export per day</div>
+            <ul class="plan-features">
+              <li class="feature-included">50 track playlists</li>
+              <li class="feature-included">1 export per day</li>
+              <li class="feature-excluded">Import History</li>
+              <li class="feature-excluded">Track variations view</li>
+            </ul>
+            <button id="free-plan-action-btn" class="upgrade-btn">Upgrade to Pro</button>
+          </div>
+        </section>
+        
+        <!-- Trial User Subscription Info -->
+        <section class="settings-section" id="trial-subscription-section" style="display: none;">
+          <div class="subscription-card trial-card">
+            <div class="subscription-header">
+              <span class="subscription-badge trial">TRIAL</span>
+              <h3>Free Trial</h3>
+            </div>
+            <div class="subscription-description">1000 track Playlists • Unlimited exports</div>
+            <ul class="plan-features">
+              <li class="feature-included">Unlimited exports</li>
+              <li class="feature-included">1000 track Playlists</li>
+              <li class="feature-included">View Import History</li>
+              <li class="feature-included">See all track variations for every playlist</li>
+            </ul>
+            <div id="settings-trial-subscription-info" class="trial-subscription-info">Trial expires in X days</div>
+            <button class="upgrade-btn" onclick="window.location.href='/pricing.html'">Upgrade to Pro</button>
+          </div>
+        </section>
+
+        <!-- Premium User Subscription Info -->
+        <section class="settings-section" id="premium-subscription-section" style="display: none;">
+          <div class="subscription-card premium-card">
+            <div class="subscription-header">
+              <span class="subscription-badge premium">PRO</span>
+              <h3>Pro Plan</h3>
+            </div>
+            <div class="subscription-description">1000 track Playlists • Unlimited exports</div>
+            <ul class="plan-features">
+              <li class="feature-included">Unlimited exports</li>
+              <li class="feature-included">1000 track Playlists</li>
+              <li class="feature-included">View Import History</li>
+              <li class="feature-included">See all track variations for every playlist</li>
+              <span id="pro-lifetime-feature"></span>
+            </ul>
+            <div id="settings-premium-subscription-info" class="premium-subscription-info">Premium plan – Active</div>
+            <button id="manage-subscription-btn" class="manage-subscription-btn">Manage Subscription</button>
+            <div id="cancel-anytime-text" class="cancel-anytime-text">Cancel Anytime</div>
+          </div>
+        </section>
+        
+        <!-- Database Settings -->
+        <section class="settings-section">
+          <h3>Database File</h3>
+          <p>Update your Serato database file. This will overwrite your existing database file.</p>
+          <div class="upload-area-small" id="settings-upload-area">
+            <div class="upload-icon">📁</div>
+            <p>Drag and drop your new database file here, or click to browse</p>
+            <button class="upload-btn-small" id="settings-upload-btn">Choose File</button>
+            <input type="file" id="settingsDatabaseFile" accept="*" style="display: none;">
+          </div>
+          <div class="upload-status" id="settings-upload-status" style="display: none;">
+            <div class="status-message" id="settings-upload-message"></div>
+          </div>
+        </section>
+        
+        <!-- Account Settings -->
+        <section class="settings-section">
+          <h3>Account</h3>
+          <div class="account-info">
+            <p><strong>Email:</strong> <span id="account-email"></span></p>
+            <p><strong>Account Type:</strong> <span id="account-type"></span></p>
+            <p><strong>Member Since:</strong> <span id="member-since"></span></p>
+          </div>
+        </section>
+      </div>
+      
+      <div class="settings-footer">
+        <a href="/" class="back-link">← Back to App</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Settings</h3>
+        <button class="modal-close" id="settings-close">×</button>
+      </div>
+      <div class="modal-content">
+        <div class="settings-section">
+          <h4>Database File</h4>
+          <p>Update your Serato database file. This will overwrite your existing database file.</p>
+          <div class="upload-area-small" id="modal-upload-area">
+            <div class="upload-icon">📁</div>
+            <p>Drag and drop your new database file here, or click to browse</p>
+            <button class="upload-btn-small" id="modal-upload-btn">Choose File</button>
+            <input type="file" id="modalDatabaseFile" accept="*" style="display: none;">
+          </div>
+          <div class="upload-status" id="modal-upload-status" style="display: none;">
+            <div class="status-message" id="modal-upload-message"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html> 

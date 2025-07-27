@@ -640,9 +640,9 @@ function setupSettings() {
     "settings-upload-message"
   );
 
-  // Open settings modal
+  // Open settings page
   settingsBtn.addEventListener("click", () => {
-    settingsModal.style.display = "flex";
+    window.location.href = "/settings.html";
   });
 
   // Close settings modal
