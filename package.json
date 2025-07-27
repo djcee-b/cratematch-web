@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@musiclibrarytools/mlt.js": "^5.1.13",
-    "@musiclibrarytools/serato.js": "^1.0.0",
     "@supabase/supabase-js": "^2.39.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -27,7 +26,8 @@
   },
   "overrides": {
     "@musiclibrarytools/wav-tag-node": "npm:mp3tag.js@^3.11.4",
-    "@musiclibrarytools/mp4-tag-node": "npm:mp3tag.js@^3.11.4"
+    "@musiclibrarytools/mp4-tag-node": "npm:mp3tag.js@^3.11.4",
+    "@musiclibrarytools/serato.js": "npm:mp3tag.js@^3.11.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
