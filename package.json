@@ -10,6 +10,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "preinstall": "npm config set registry https://registry.npmjs.org/",
     "postinstall": "npm cache clean --force",
     "deploy-setup": "./scripts/deploy-setup.sh"
   },
@@ -23,6 +24,9 @@
     "fs": "^0.0.1-security",
     "multer": "^1.4.5-lts.1",
     "path": "^0.12.7"
+  },
+  "overrides": {
+    "@musiclibrarytools/wav-tag-node": "npm:@musiclibrarytools/mp4-tag-node@^1.0.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

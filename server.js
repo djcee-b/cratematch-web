@@ -138,6 +138,12 @@ const cleanupExpiredCache = () => {
         files.forEach((file) => {
           const filePath = path.join(userDir, file);
           const stats = fs.statSync(filePath);
+          
+          // Skip .gitkeep files and only process regular files
+          if (file === '.gitkeep' || stats.isDirectory()) {
+            return;
+          }
+          
           const fileAge = now.getTime() - stats.mtime.getTime();
 
           if (fileAge > maxAge) {
@@ -153,10 +159,15 @@ const cleanupExpiredCache = () => {
       const userDir = path.join(cacheDir, userId);
       cleanupUserCache(userDir);
 
-      // Remove empty user directories
-      if (fs.existsSync(userDir) && fs.readdirSync(userDir).length === 0) {
-        fs.rmdirSync(userDir);
-        console.log(`Removed empty cache directory: ${userDir}`);
+      // Remove empty user directories (excluding .gitkeep files)
+      if (fs.existsSync(userDir)) {
+        const files = fs.readdirSync(userDir);
+        const nonGitkeepFiles = files.filter(file => file !== '.gitkeep');
+        
+        if (nonGitkeepFiles.length === 0) {
+          fs.rmdirSync(userDir);
+          console.log(`Removed empty cache directory: ${userDir}`);
+        }
       }
     });
   } catch (error) {
