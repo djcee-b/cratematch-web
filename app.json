@@ -1,0 +1,28 @@
+{
+  "name": "CrateMatch Web",
+  "description": "Web version of CrateMatch - Spotify playlist to Serato crate converter",
+  "repository": "https://github.com/djcee-b/cratematch-web",
+  "logo": "",
+  "keywords": ["node", "express", "serato", "spotify", "music"],
+  "env": {
+    "NODE_ENV": {
+      "description": "Environment setting for the application",
+      "value": "production"
+    },
+    "PORT": {
+      "description": "Port for the application to run on",
+      "value": "3000"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  }
+} 
