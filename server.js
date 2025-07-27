@@ -448,41 +448,40 @@ app.get(
 );
 
 // Get current user for pricing page (doesn't require active subscription)
-app.get(
-  "/api/auth/verify",
-  requireAuth,
-  async (req, res) => {
-    try {
-      const { data: machine, error } =
-        await machineOperations.getMachineByEmail(req.user.email);
+app.get("/api/auth/verify", requireAuth, async (req, res) => {
+  try {
+    const { data: machine, error } = await machineOperations.getMachineByEmail(
+      req.user.email
+    );
 
-      if (error) {
-        return res.status(500).json({
-          error: "Failed to fetch user data",
-          message: "Please try again",
-        });
-      }
-
-      res.json({
-        user: req.user,
-        machine: machine,
-        subscriptionStatus: machine?.role || "trial",
-      });
-    } catch (error) {
-      console.error("Get user error:", error);
-      res.status(500).json({
+    if (error) {
+      return res.status(500).json({
         error: "Failed to fetch user data",
         message: "Please try again",
       });
     }
+
+    res.json({
+      user: req.user,
+      machine: machine,
+      subscriptionStatus: machine?.role || "trial",
+    });
+  } catch (error) {
+    console.error("Get user error:", error);
+    res.status(500).json({
+      error: "Failed to fetch user data",
+      message: "Please try again",
+    });
   }
-);
+});
 
 // Create Stripe Customer Portal session for subscription management
 app.post("/api/stripe/create-portal-session", requireAuth, async (req, res) => {
   try {
-    const { data: machine, error } = await machineOperations.getMachineByEmail(req.user.email);
-    
+    const { data: machine, error } = await machineOperations.getMachineByEmail(
+      req.user.email
+    );
+
     if (error || !machine) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -497,26 +496,28 @@ app.post("/api/stripe/create-portal-session", requireAuth, async (req, res) => {
         email: req.user.email,
         metadata: {
           user_id: req.user.id,
-          machine_id: machine.id
-        }
+          machine_id: machine.id,
+        },
       });
-      
+
       // Update machine with Stripe customer ID
       await machineOperations.updateMachine(machine.id, {
-        stripe_customer_id: customer.id
+        stripe_customer_id: customer.id,
       });
     }
 
     // Create portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: customer.id,
-      return_url: `${process.env.WEBAPP_URL || 'http://localhost:3000'}/settings.html`,
+      return_url: `${
+        process.env.WEBAPP_URL || "http://localhost:3000"
+      }/settings.html`,
     });
 
     res.json({ url: session.url });
   } catch (error) {
-    console.error('Error creating portal session:', error);
-    res.status(500).json({ error: 'Failed to create portal session' });
+    console.error("Error creating portal session:", error);
+    res.status(500).json({ error: "Failed to create portal session" });
   }
 });
 
@@ -929,6 +930,9 @@ const requireActiveSubscriptionForProgress = async (req, res, next) => {
   }
 };
 
+// Store active processing sessions
+const activeSessions = new Map();
+
 // Process playlist with progress updates (Server-Sent Events)
 app.get(
   "/process-playlist-progress",
@@ -937,6 +941,32 @@ app.get(
   async (req, res) => {
     // Extract variables outside try block so they're available in catch
     const { playlistUrl, threshold, databaseFileName } = req.query;
+
+    // Create session tracking
+    const sessionId = req.user.id + "_" + Date.now();
+    const session = {
+      res,
+      userId: req.user.id,
+      playlistUrl: playlistUrl,
+      isActive: true,
+      abortController: new AbortController(),
+    };
+
+    // Store the session
+    activeSessions.set(sessionId, session);
+
+    // Handle client disconnect
+    req.on("close", () => {
+      console.log(
+        `Client disconnected, stopping processing for session: ${sessionId}`
+      );
+      const session = activeSessions.get(sessionId);
+      if (session) {
+        session.isActive = false;
+        session.abortController.abort();
+        activeSessions.delete(sessionId);
+      }
+    });
 
     try {
       if (!playlistUrl || !threshold || !databaseFileName) {
@@ -1004,6 +1034,13 @@ app.get(
       const results = await importSpotifyPlaylist(
         playlistUrl,
         (progress) => {
+          // Check if session is still active
+          const currentSession = activeSessions.get(sessionId);
+          if (!currentSession || !currentSession.isActive) {
+            console.log(`Session ${sessionId} is no longer active, stopping processing`);
+            throw new Error('Client disconnected');
+          }
+
           console.log("Progress callback received:", progress);
           console.log("Progress type:", typeof progress);
           console.log("Progress constructor:", progress?.constructor?.name);
@@ -1054,6 +1091,12 @@ app.get(
           }
 
           console.log(`Sending progress: ${progressPercent}% - ${message}`);
+
+          // Check again before sending
+          const sessionCheck = activeSessions.get(sessionId);
+          if (!sessionCheck || !sessionCheck.isActive) {
+            throw new Error('Client disconnected');
+          }
 
           res.write(
             `data: ${JSON.stringify({
@@ -1201,9 +1244,20 @@ app.get(
         })}\n\n`
       );
 
+      // Clean up session
+      activeSessions.delete(sessionId);
       res.end();
     } catch (error) {
       console.error("Playlist processing error:", error);
+
+      // Clean up session
+      activeSessions.delete(sessionId);
+
+      // Check if this was a client disconnect
+      if (error.message === 'Client disconnected') {
+        console.log(`Processing stopped due to client disconnect for session: ${sessionId}`);
+        return; // Don't send error response since client is gone
+      }
 
       // Clean up temporary database file even on error
       if (databaseFileName) {
@@ -1357,8 +1411,10 @@ app.get("/api/health", (req, res) => {
     environment: process.env.NODE_ENV || "development",
     publicFiles: {
       exists: fs.existsSync(path.join(__dirname, "public")),
-      files: fs.existsSync(path.join(__dirname, "public")) ? fs.readdirSync(path.join(__dirname, "public")).length : 0
-    }
+      files: fs.existsSync(path.join(__dirname, "public"))
+        ? fs.readdirSync(path.join(__dirname, "public")).length
+        : 0,
+    },
   });
 });
 
@@ -1377,44 +1433,46 @@ app.get("/settings.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "settings.html"));
 });
 
-
-
 // Stripe Webhook
-app.post("/api/stripe/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  let event;
+    let event;
 
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    } catch (err) {
+      console.error("Webhook signature verification failed:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case "checkout.session.completed":
+        const session = event.data.object;
+        await handlePaymentSuccess(session);
+        break;
+      case "checkout.session.expired":
+        const expiredSession = event.data.object;
+        await handlePaymentFailure(expiredSession);
+        break;
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    res.json({ received: true });
   }
-
-  // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object;
-      await handlePaymentSuccess(session);
-      break;
-    case 'checkout.session.expired':
-      const expiredSession = event.data.object;
-      await handlePaymentFailure(expiredSession);
-      break;
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
-
-  res.json({ received: true });
-});
+);
 
 // Handle successful payment
 async function handlePaymentSuccess(session) {
   try {
     const { userId, planType } = session.metadata;
-    
+
     // Update user subscription in database
     const updateData = {
       role: "premium",
@@ -1426,38 +1484,57 @@ async function handlePaymentSuccess(session) {
       last_seen: new Date().toISOString(),
     };
 
-    const { data, error } = await machineOperations.updateMachine(userId, updateData);
-    
+    const { data, error } = await machineOperations.updateMachine(
+      userId,
+      updateData
+    );
+
     if (error) {
-      console.error('Error updating user subscription:', error);
+      console.error("Error updating user subscription:", error);
     } else {
-      console.log('User subscription updated successfully:', data);
+      console.log("User subscription updated successfully:", data);
     }
   } catch (error) {
-    console.error('Error handling payment success:', error);
+    console.error("Error handling payment success:", error);
   }
 }
 
 // Handle payment failure
 async function handlePaymentFailure(session) {
-  console.log('Payment failed or expired:', session.id);
+  console.log("Payment failed or expired:", session.id);
   // You can add additional logic here like sending emails, etc.
 }
 
 // Get subscription end date based on plan type
 function getSubscriptionEndDate(planType) {
   const now = new Date();
-  
+
   switch (planType) {
-    case 'monthly':
-      return new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString();
-    case 'yearly':
-      return new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString();
-    case 'lifetime':
+    case "monthly":
+      return new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        now.getDate()
+      ).toISOString();
+    case "yearly":
+      return new Date(
+        now.getFullYear() + 1,
+        now.getMonth(),
+        now.getDate()
+      ).toISOString();
+    case "lifetime":
       // Lifetime plans don't expire - set to 50 years from now
-      return new Date(now.getFullYear() + 50, now.getMonth(), now.getDate()).toISOString();
+      return new Date(
+        now.getFullYear() + 50,
+        now.getMonth(),
+        now.getDate()
+      ).toISOString();
     default:
-      return new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString();
+      return new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        now.getDate()
+      ).toISOString();
   }
 }
 
