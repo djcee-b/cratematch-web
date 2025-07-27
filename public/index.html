@@ -125,6 +125,10 @@
       <div class="spinner"></div>
       <h3>Processing Playlist...</h3>
       <p id="processing-message">This may take a few moments depending on the playlist size.</p>
+      <div class="processing-warning">
+        <div class="warning-icon">⚠️</div>
+        <p><strong>Don't close this window!</strong> Your crate will not be created if you leave this page.</p>
+      </div>
       <div class="progress-container" id="progress-container" style="display: none;">
         <div class="progress-bar">
           <div class="progress-fill" id="progress-fill"></div>
@@ -172,6 +176,45 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Track Details Modal -->
+  <div class="modal-overlay" id="track-details-modal" style="display: none;">
+    <div class="modal large-modal">
+      <div class="modal-header">
+        <h3 id="track-details-title">Track Details</h3>
+        <button class="modal-close" id="track-details-close">×</button>
+      </div>
+      <div class="modal-content">
+        <div class="table-tabs">
+          <button class="tab-btn active" data-tab="found" id="found-tab-btn">Found Tracks</button>
+          <button class="tab-btn" data-tab="missing" id="missing-tab-btn">Missing Tracks</button>
+        </div>
+        
+        <div class="table-content">
+          <div class="table-tab active" id="found-tab">
+            <div id="found-tracks-content"></div>
+          </div>
+          <div class="table-tab" id="missing-tab">
+            <div id="missing-tracks-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Text List Modal -->
+  <div class="text-list-modal" id="text-list-modal">
+    <div class="text-list-header">
+      <h3 class="text-list-title">Missing Tracks - Copy & Paste List</h3>
+      <button class="text-list-close" id="text-list-close">×</button>
+    </div>
+    <div class="text-list-content">
+      <div class="text-list-tracks" id="text-list-tracks"></div>
+    </div>
+    <div class="text-list-actions">
+      <button class="text-list-copy" id="text-list-copy">📋 Copy to Clipboard</button>
     </div>
   </div>
 

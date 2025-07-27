@@ -430,26 +430,18 @@ async function processPlaylist() {
   }
 
   try {
-    // Disable process button and show processing state
+    // Disable process button and show processing overlay
     processBtn.disabled = true;
     processBtn.textContent = "Processing...";
 
-    // Update the process section to show progress
-    const sectionContent = document.querySelector(
-      "#process-section .section-content"
-    );
-    const originalContent = sectionContent.innerHTML;
+    // Show the processing overlay
+    processingOverlay.style.display = "flex";
 
-    sectionContent.innerHTML = `
-      <div class="processing-state">
-        <div class="progress-container">
-          <div class="progress-bar">
-            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
-          </div>
-          <div class="progress-text" id="progress-text">Starting...</div>
-        </div>
-      </div>
-    `;
+    // Show progress container
+    const progressContainer = document.getElementById("progress-container");
+    if (progressContainer) {
+      progressContainer.style.display = "block";
+    }
 
     // Create EventSource for progress updates with auth token in URL
     const eventSourceUrl = `/process-playlist-progress?playlistUrl=${encodeURIComponent(
@@ -484,6 +476,8 @@ async function processPlaylist() {
         } else if (data.type === "complete") {
           console.log("Processing complete:", data);
           eventSource.close();
+          // Hide processing overlay
+          processingOverlay.style.display = "none";
           console.log("Calling showResults with:", {
             results: data.results,
             crateFile: data.crateFile,
@@ -500,11 +494,8 @@ async function processPlaylist() {
           console.error("Processing error:", data);
           eventSource.close();
           showError(data.message || "Processing failed");
-          // Restore original content
-          const sectionContent = document.querySelector(
-            "#process-section .section-content"
-          );
-          sectionContent.innerHTML = originalContent;
+          // Hide processing overlay
+          processingOverlay.style.display = "none";
           processBtn.disabled = false;
           processBtn.textContent = "Process Playlist";
         }
@@ -517,22 +508,16 @@ async function processPlaylist() {
       console.error("EventSource error:", error);
       eventSource.close();
       showError("Connection lost. Please try again.");
-      // Restore original content
-      const sectionContent = document.querySelector(
-        "#process-section .section-content"
-      );
-      sectionContent.innerHTML = originalContent;
+      // Hide processing overlay
+      processingOverlay.style.display = "none";
       processBtn.disabled = false;
       processBtn.textContent = "Process Playlist";
     };
   } catch (error) {
     console.error("Processing error:", error);
     showError("Processing failed. Please try again.");
-    // Restore original content
-    const sectionContent = document.querySelector(
-      "#process-section .section-content"
-    );
-    sectionContent.innerHTML = originalContent;
+    // Hide processing overlay
+    processingOverlay.style.display = "none";
     processBtn.disabled = false;
     processBtn.textContent = "Process Playlist";
   }
@@ -545,6 +530,27 @@ function showResults(results, crateFile, downloadUrl, hasCrateFile) {
     downloadUrl,
     hasCrateFile,
   });
+
+  // Debug: Log the full results structure
+  console.log("Full results object:", JSON.stringify(results, null, 2));
+  console.log("Results keys:", Object.keys(results));
+
+  // Check for track lists in different possible locations
+  if (results.tracks) {
+    console.log("Found 'tracks' array:", results.tracks);
+  }
+  if (results.foundTracksList) {
+    console.log("Found 'foundTracksList' array:", results.foundTracksList);
+  }
+  if (results.missingTracksList) {
+    console.log("Found 'missingTracksList' array:", results.missingTracksList);
+  }
+  if (results.foundTracks) {
+    console.log("Found 'foundTracks' array:", results.foundTracks);
+  }
+  if (results.missingTracks) {
+    console.log("Found 'missingTracks' array:", results.missingTracks);
+  }
 
   // Hide the process section and show results
   document.getElementById("process-section").style.display = "none";
@@ -619,17 +625,25 @@ function showResults(results, crateFile, downloadUrl, hasCrateFile) {
         </div>
         <div class="stat">
           <div class="stat-label">Found in Library</div>
-          <div class="stat-value found">${results.foundTracks}</div>
+          <div class="stat-value found clickable" id="found-btn">${
+            results.foundTracks
+          }</div>
         </div>
         <div class="stat">
           <div class="stat-label">Missing</div>
-          <div class="stat-value missing">${
+          <div class="stat-value missing clickable" id="missing-btn">${
             (results.totalTracks || 0) - results.foundTracks
           }</div>
         </div>
       </div>
     `;
     resultsDetails.innerHTML = detailsHtml;
+
+    // Store results data for popup
+    window.resultsData = results;
+
+    // Setup click handlers for the buttons
+    setupResultsButtons();
   } else {
     resultsDetails.innerHTML =
       "<p>No tracks were found in your Serato library that match this playlist.</p>";
@@ -637,6 +651,414 @@ function showResults(results, crateFile, downloadUrl, hasCrateFile) {
 
   // Scroll to results
   resultsSection.scrollIntoView({ behavior: "smooth" });
+}
+
+function generateTrackTable(tracks, type) {
+  console.log(`Generating ${type} table with tracks:`, tracks);
+
+  if (!tracks || tracks.length === 0) {
+    return `<div class="no-tracks">No ${type} tracks to display.</div>`;
+  }
+
+  const tableRows = tracks
+    .map((track, index) => {
+      console.log(`Processing track ${index}:`, track);
+      console.log(`Track keys:`, Object.keys(track));
+
+      // Try different possible property names for the data
+      const matchPercentage =
+        track.similarityScore ||
+        track.matchPercentage ||
+        track.percentage ||
+        track.matchPercent ||
+        track.score ||
+        track.similarity ||
+        "N/A";
+      const spotifyTrack =
+        track.name ||
+        track.title ||
+        track.spotifyTrack ||
+        track.spotify ||
+        track.trackName ||
+        track.spotify_name ||
+        track.spotifyName ||
+        "Unknown";
+      let seratoTrack = "Not found";
+      let variationsPopup = "";
+
+      if (type === "found" && track.versions && track.versions.length > 0) {
+        if (track.versions.length === 1) {
+          seratoTrack = {
+            title: track.versions[0].originalSeratoTitle,
+            artist: track.versions[0].originalSeratoArtist,
+          };
+        } else {
+          // Show first variation with popup for others
+          seratoTrack = {
+            title: track.versions[0].originalSeratoTitle,
+            artist: track.versions[0].originalSeratoArtist,
+          };
+          variationsPopup = `
+                <div class="variations-popup">
+                  <div class="variations-popup-title">All ${
+                    track.versions.length
+                  } versions found:</div>
+                  ${track.versions
+                    .map(
+                      (v) =>
+                        `<div class="variations-popup-item">${v.originalSeratoTitle} - ${v.originalSeratoArtist}</div>`
+                    )
+                    .join("")}
+                </div>
+              `;
+        }
+      } else if (type === "missing") {
+        seratoTrack = "Not found in library";
+      }
+      const artist = (
+        track.artist ||
+        track.spotifyArtist ||
+        track.spotify_artist ||
+        track.trackArtist ||
+        track.spotify_artist_name ||
+        track.spotifyArtistName ||
+        "Unknown"
+      ).replace(/\b\w/g, (l) => l.toUpperCase());
+      const album =
+        track.album ||
+        track.spotifyAlbum ||
+        track.spotify_album ||
+        track.trackAlbum ||
+        track.spotify_album_name ||
+        track.spotifyAlbumName ||
+        track.playlistName ||
+        track.source ||
+        "No album info";
+
+      return `
+            <tr class="track-row ${
+              type === "found" ? "status-found" : "status-missing"
+            }">
+              <td class="track-number">${index + 1}</td>
+              <td class="track-info">
+                <div class="track-name">${spotifyTrack}</div>
+                <div class="track-artist">${artist}</div>
+                ${
+                  album !== "No album info"
+                    ? `<div class="track-album">${album}</div>`
+                    : ""
+                }
+              </td>
+              <td class="track-match">
+                ${
+                  typeof seratoTrack === "object"
+                    ? `<div class="track-name">${seratoTrack.title}</div><div class="track-artist">${seratoTrack.artist}</div>`
+                    : seratoTrack
+                }
+              </td>
+              <td class="track-percentage">
+                <span class="percentage-badge ${getPercentageClass(
+                  matchPercentage
+                )}">
+                  ${matchPercentage}%
+                </span>
+              </td>
+              <td class="track-variations status-cell">
+                ${
+                  track.versions && track.versions.length > 1
+                    ? `<span class="variations-indicator">+${
+                        track.versions.length - 1
+                      }</span>`
+                    : "<span class='no-variations'>-</span>"
+                }
+                ${variationsPopup}
+              </td>
+            </tr>
+          `;
+    })
+    .join("");
+
+  return `
+    <div class="table-wrapper">
+      ${
+        type === "missing" && tracks.length > 0
+          ? `
+        <div class="text-list-button-container">
+          <button class="text-list-button" onclick="showTextList('${type}')">
+            📋 Show Text List (${tracks.length} tracks)
+          </button>
+        </div>
+      `
+          : ""
+      }
+      <table class="tracks-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Spotify Track</th>
+            <th>Serato Match</th>
+            <th>Match %</th>
+            <th>Variations</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function getPercentageClass(percentage) {
+  if (percentage === "N/A") return "percentage-na";
+  const num = parseInt(percentage);
+  if (num >= 95) return "percentage-excellent";
+  if (num >= 85) return "percentage-good";
+  if (num >= 75) return "percentage-fair";
+  return "percentage-poor";
+}
+
+function setupResultsButtons() {
+  const foundBtn = document.getElementById("found-btn");
+  const missingBtn = document.getElementById("missing-btn");
+
+  if (foundBtn) {
+    foundBtn.addEventListener("click", () => {
+      showTrackDetailsModal("found");
+    });
+  }
+
+  if (missingBtn) {
+    missingBtn.addEventListener("click", () => {
+      showTrackDetailsModal("missing");
+    });
+  }
+}
+
+function showTrackDetailsModal(type) {
+  const modal = document.getElementById("track-details-modal");
+  const title = document.getElementById("track-details-title");
+  const foundTabBtn = document.getElementById("found-tab-btn");
+  const missingTabBtn = document.getElementById("missing-tab-btn");
+  const foundContent = document.getElementById("found-tracks-content");
+  const missingContent = document.getElementById("missing-tracks-content");
+
+  if (!window.resultsData) {
+    console.error("No results data available");
+    return;
+  }
+
+  const results = window.resultsData;
+
+  // Update title
+  title.textContent = type === "found" ? "Found Tracks" : "Missing Tracks";
+
+  // Update tab button text with counts
+  foundTabBtn.textContent = `Found Tracks (${results.foundTracks})`;
+  missingTabBtn.textContent = `Missing Tracks (${
+    (results.totalTracks || 0) - results.foundTracks
+  })`;
+
+  // Generate table content
+  console.log("Looking for track data in results:", results);
+
+  // Try different possible data structures
+  let foundTracks = [];
+  let missingTracks = [];
+
+  if (
+    results.foundTracksDetailed &&
+    Array.isArray(results.foundTracksDetailed)
+  ) {
+    foundTracks = results.foundTracksDetailed;
+    console.log("Using foundTracksDetailed:", foundTracks);
+  } else if (
+    results.foundTracksList &&
+    Array.isArray(results.foundTracksList)
+  ) {
+    foundTracks = results.foundTracksList;
+    console.log("Using foundTracksList:", foundTracks);
+  } else if (results.foundTracks && Array.isArray(results.foundTracks)) {
+    foundTracks = results.foundTracks;
+    console.log("Using foundTracks array:", foundTracks);
+  } else if (results.tracks && Array.isArray(results.tracks)) {
+    foundTracks = results.tracks.filter(
+      (t) => t.found || t.matched || t.status === "found"
+    );
+    missingTracks = results.tracks.filter(
+      (t) => !t.found && !t.matched && t.status !== "found"
+    );
+    console.log(
+      "Using tracks array - found:",
+      foundTracks,
+      "missing:",
+      missingTracks
+    );
+  } else if (results.matchedTracks && Array.isArray(results.matchedTracks)) {
+    foundTracks = results.matchedTracks;
+    console.log("Using matchedTracks:", foundTracks);
+  } else if (
+    results.unmatchedTracks &&
+    Array.isArray(results.unmatchedTracks)
+  ) {
+    missingTracks = results.unmatchedTracks;
+    console.log("Using unmatchedTracks:", missingTracks);
+  }
+
+  if (
+    results.missingTracksDetailed &&
+    Array.isArray(results.missingTracksDetailed)
+  ) {
+    missingTracks = results.missingTracksDetailed;
+    console.log("Using missingTracksDetailed:", missingTracks);
+  } else if (
+    results.missingTracksList &&
+    Array.isArray(results.missingTracksList)
+  ) {
+    missingTracks = results.missingTracksList;
+    console.log("Using missingTracksList:", missingTracks);
+  }
+
+  // If we still don't have data, try to extract from other properties
+  if (foundTracks.length === 0 && missingTracks.length === 0) {
+    console.log("No standard track arrays found, checking other properties...");
+    console.log("All results keys:", Object.keys(results));
+
+    // Look for any array properties that might contain track data
+    for (const [key, value] of Object.entries(results)) {
+      if (Array.isArray(value) && value.length > 0) {
+        console.log(`Found array property '${key}':`, value);
+        if (
+          key.toLowerCase().includes("found") ||
+          key.toLowerCase().includes("matched")
+        ) {
+          foundTracks = value;
+        } else if (
+          key.toLowerCase().includes("missing") ||
+          key.toLowerCase().includes("unmatched")
+        ) {
+          missingTracks = value;
+        }
+      }
+    }
+  }
+
+  foundContent.innerHTML = generateTrackTable(foundTracks, "found");
+  missingContent.innerHTML = generateTrackTable(missingTracks, "missing");
+
+  // Set initial active tab
+  const tabButtons = document.querySelectorAll("#track-details-modal .tab-btn");
+  const tabContents = document.querySelectorAll(
+    "#track-details-modal .table-tab"
+  );
+
+  tabButtons.forEach((btn) => btn.classList.remove("active"));
+  tabContents.forEach((content) => content.classList.remove("active"));
+
+  if (type === "found") {
+    foundTabBtn.classList.add("active");
+    document.getElementById("found-tab").classList.add("active");
+  } else {
+    missingTabBtn.classList.add("active");
+    document.getElementById("missing-tab").classList.add("active");
+  }
+
+  // Show modal
+  modal.style.display = "flex";
+
+  // Setup tab switching within modal
+  setupModalTableTabs();
+
+  // Setup variations expand/collapse
+  setupVariationsHandlers();
+
+  // Setup close button
+  const closeBtn = document.getElementById("track-details-close");
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      modal.style.display = "none";
+    };
+  }
+
+  // Close on overlay click
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      modal.style.display = "none";
+    }
+  };
+}
+
+function setupModalTableTabs() {
+  const tabButtons = document.querySelectorAll("#track-details-modal .tab-btn");
+  const tabContents = document.querySelectorAll(
+    "#track-details-modal .table-tab"
+  );
+
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const targetTab = button.dataset.tab;
+
+      // Update active button
+      tabButtons.forEach((btn) => btn.classList.remove("active"));
+      button.classList.add("active");
+
+      // Update active content
+      tabContents.forEach((content) => content.classList.remove("active"));
+      document.getElementById(`${targetTab}-tab`).classList.add("active");
+    });
+  });
+}
+
+function setupVariationsHandlers() {
+  const variationIndicators = document.querySelectorAll(
+    ".variations-indicator"
+  );
+
+  variationIndicators.forEach((indicator) => {
+    indicator.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const popup = indicator.parentElement.querySelector(".variations-popup");
+      if (popup) {
+        // Close any other open popups first
+        document.querySelectorAll(".variations-popup.show").forEach((p) => {
+          if (p !== popup) p.classList.remove("show");
+        });
+
+        popup.classList.toggle("show");
+      }
+    });
+  });
+
+  // Close popups when clicking outside
+  document.addEventListener("click", (e) => {
+    if (
+      !e.target.closest(".variations-indicator") &&
+      !e.target.closest(".variations-popup")
+    ) {
+      document.querySelectorAll(".variations-popup.show").forEach((popup) => {
+        popup.classList.remove("show");
+      });
+    }
+  });
+}
+
+function setupTableTabs() {
+  const tabButtons = document.querySelectorAll(".tab-btn");
+  const tabContents = document.querySelectorAll(".table-tab");
+
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const targetTab = button.dataset.tab;
+
+      // Update active button
+      tabButtons.forEach((btn) => btn.classList.remove("active"));
+      button.classList.add("active");
+
+      // Update active content
+      tabContents.forEach((content) => content.classList.remove("active"));
+      document.getElementById(`${targetTab}-tab`).classList.add("active");
+    });
+  });
 }
 
 // Error handling
@@ -844,4 +1266,76 @@ function setupUpgradeButton() {
       window.location.href = "/pricing.html";
     });
   }
+}
+
+// Text List Functions
+function showTextList(type) {
+  if (!window.resultsData) {
+    console.error("No results data available");
+    return;
+  }
+
+  const results = window.resultsData;
+  let tracks = [];
+
+  // Get missing tracks data
+  if (type === "missing") {
+    if (results.missingTracksDetailed && Array.isArray(results.missingTracksDetailed)) {
+      tracks = results.missingTracksDetailed;
+    } else if (results.missingTracksList && Array.isArray(results.missingTracksList)) {
+      tracks = results.missingTracksList;
+    } else if (results.unmatchedTracks && Array.isArray(results.unmatchedTracks)) {
+      tracks = results.unmatchedTracks;
+    } else if (results.tracks && Array.isArray(results.tracks)) {
+      tracks = results.tracks.filter(t => !t.found && !t.matched && t.status !== "found");
+    }
+  }
+
+  if (tracks.length === 0) {
+    console.error("No missing tracks found");
+    return;
+  }
+
+  // Generate text list
+  const textList = tracks.map(track => {
+    const trackName = track.name || track.title || track.spotifyTrack || track.spotify || track.trackName || track.spotify_name || track.spotifyName || "Unknown";
+    const artist = (track.artist || track.spotifyArtist || track.spotify_artist || track.trackArtist || track.spotify_artist_name || track.spotifyArtistName || "Unknown").replace(/\b\w/g, l => l.toUpperCase());
+    return `${trackName} - ${artist}`;
+  }).join('\n');
+
+  // Update modal content
+  document.getElementById('text-list-tracks').textContent = textList;
+  
+  // Show modal
+  document.getElementById('text-list-modal').classList.add('show');
+
+  // Setup copy functionality
+  document.getElementById('text-list-copy').onclick = () => {
+    navigator.clipboard.writeText(textList).then(() => {
+      const copyBtn = document.getElementById('text-list-copy');
+      const originalText = copyBtn.textContent;
+      copyBtn.textContent = '✅ Copied!';
+      copyBtn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+      
+      setTimeout(() => {
+        copyBtn.textContent = originalText;
+        copyBtn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+      alert('Failed to copy to clipboard. Please select and copy the text manually.');
+    });
+  };
+
+  // Setup close functionality
+  document.getElementById('text-list-close').onclick = () => {
+    document.getElementById('text-list-modal').classList.remove('show');
+  };
+
+  // Close on outside click
+  document.getElementById('text-list-modal').onclick = (e) => {
+    if (e.target === document.getElementById('text-list-modal')) {
+      document.getElementById('text-list-modal').classList.remove('show');
+    }
+  };
 }
