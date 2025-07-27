@@ -23,14 +23,26 @@ const publicPath = path.join(__dirname, "public");
 console.log(`📁 Public directory path: ${publicPath}`);
 console.log(`📁 Public directory exists: ${fs.existsSync(publicPath)}`);
 
+let staticServed = false;
+
 if (fs.existsSync(publicPath)) {
-  console.log(`📄 Public directory contents:`);
-  fs.readdirSync(publicPath).forEach((file) => {
+  const files = fs.readdirSync(publicPath);
+  console.log(`📄 Public directory contents (${files.length} items):`);
+  files.forEach((file) => {
     console.log(`  - ${file}`);
   });
-  app.use(express.static(publicPath));
-} else {
-  console.log(`❌ Public directory not found at: ${publicPath}`);
+  
+  if (files.length > 0) {
+    app.use(express.static(publicPath));
+    staticServed = true;
+    console.log(`✅ Static files served from: ${publicPath}`);
+  } else {
+    console.log(`⚠️  Public directory is empty`);
+  }
+}
+
+if (!staticServed) {
+  console.log(`🔍 Trying alternative paths for static files...`);
   // Try alternative paths for different deployment environments
   const altPaths = [
     path.join(process.cwd(), "public"),
@@ -40,11 +52,21 @@ if (fs.existsSync(publicPath)) {
 
   for (const altPath of altPaths) {
     if (fs.existsSync(altPath)) {
-      console.log(`✅ Found public directory at: ${altPath}`);
-      app.use(express.static(altPath));
-      break;
+      const files = fs.readdirSync(altPath);
+      if (files.length > 0) {
+        console.log(`✅ Found public directory at: ${altPath} with ${files.length} files`);
+        app.use(express.static(altPath));
+        staticServed = true;
+        break;
+      } else {
+        console.log(`⚠️  Found empty public directory at: ${altPath}`);
+      }
     }
   }
+}
+
+if (!staticServed) {
+  console.log(`❌ No valid public directory found for static files`);
 }
 
 // Create necessary directories
