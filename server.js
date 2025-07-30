@@ -356,6 +356,33 @@ app.post("/auth/signin", async (req, res) => {
       });
     }
 
+    // Update web_user to true for this user
+    try {
+      const { data: machine, error: machineError } =
+        await machineOperations.getMachineByEmail(email);
+
+      if (machine && !machineError) {
+        // Update existing machine record
+        await machineOperations.updateMachine(machine.id, { web_user: true });
+      } else {
+        // Create new machine record for web user
+        const webMachineId = require("crypto")
+          .createHash("sha256")
+          .update(`web-${data.user.id}`)
+          .digest("hex");
+        await machineOperations.upsertMachine({
+          id: webMachineId,
+          email: email,
+          user_id: data.user.id,
+          web_user: true,
+          role: "trial",
+        });
+      }
+    } catch (updateError) {
+      console.error("Failed to update web_user status:", updateError);
+      // Don't fail the signin if this update fails
+    }
+
     res.json({
       success: true,
       message: "Signed in successfully!",
