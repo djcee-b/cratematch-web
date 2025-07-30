@@ -31,6 +31,7 @@ const userEmail = document.getElementById("user-email");
 const subscriptionStatus = document.getElementById("subscription-status");
 const settingsBtn = document.getElementById("settings-btn");
 const signOutBtn = document.getElementById("sign-out-btn");
+const backToAppLink = document.getElementById("back-to-app-link");
 
 // Pricing elements
 const monthlyBtn = document.getElementById("monthly-plan-btn");
@@ -126,6 +127,11 @@ function updateUserInterface() {
     if (status === "premium") {
       window.location.href = "/";
     }
+  }
+
+  // Update back to app link for logged in users
+  if (backToAppLink) {
+    backToAppLink.href = "/app";
   }
 
   // Hide loading overlay

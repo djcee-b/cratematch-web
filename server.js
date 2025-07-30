@@ -8,6 +8,7 @@ const fs = require("fs");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { importSpotifyPlaylist } = require("@musiclibrarytools/mlt.js");
 const {
+  supabase,
   authOperations,
   storageOperations,
   machineOperations,
@@ -19,7 +20,8 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Enhanced static file serving with logging (moved after routes)
 const publicPath = path.join(__dirname, "public");
@@ -1075,7 +1077,8 @@ app.get(
         `data: ${JSON.stringify({
           type: "progress",
           progress: 5,
-          message: "Loading database...",
+          message: "Initializing playlist processing...",
+          stage: "Initializing",
         })}\n\n`
       );
 
@@ -1120,6 +1123,7 @@ app.get(
           type: "progress",
           progress: 15,
           message: "Database loaded, starting playlist processing...",
+          stage: "Loading database",
         })}\n\n`
       );
 
@@ -1145,6 +1149,7 @@ app.get(
                 type: "progress",
                 progress: 50,
                 message: "Processing playlist... (heartbeat)",
+                stage: "Processing tracks",
               })}\n\n`
             );
           } catch (writeError) {
@@ -1262,13 +1267,91 @@ app.get(
           }
 
           try {
-            res.write(
-              `data: ${JSON.stringify({
-                type: "progress",
-                progress: Math.round(progressPercent),
-                message: message,
-              })}\n\n`
-            );
+            // Prepare progress data with enhanced information
+            const progressData = {
+              type: "progress",
+              progress: Math.round(progressPercent),
+              message: message,
+            };
+
+            // Try to extract track information from message if it's a string
+            if (typeof progress === "string") {
+              const trackMatch = progress.match(/(\d+)\s*\/\s*(\d+)/);
+              if (trackMatch) {
+                progressData.current = parseInt(trackMatch[1]);
+                progressData.total = parseInt(trackMatch[2]);
+                progressData.trackCount = `Track ${trackMatch[1]} / ${trackMatch[2]}`;
+              }
+            }
+
+            // Add current/total track information if available
+            if (progress && typeof progress === "object") {
+              if (
+                typeof progress.current === "number" &&
+                typeof progress.total === "number"
+              ) {
+                progressData.current = progress.current;
+                progressData.total = progress.total;
+                progressData.trackCount = `Track ${progress.current} / ${progress.total}`;
+              }
+
+              // Try to extract track information from message if not already available
+              if (!progressData.trackCount && progress.message) {
+                const trackMatch = progress.message.match(/(\d+)\s*\/\s*(\d+)/);
+                if (trackMatch) {
+                  progressData.current = parseInt(trackMatch[1]);
+                  progressData.total = parseInt(trackMatch[2]);
+                  progressData.trackCount = `Track ${trackMatch[1]} / ${trackMatch[2]}`;
+                }
+              }
+
+              // Add stage information
+              if (progress.stage) {
+                progressData.stage = progress.stage;
+              } else if (
+                progress.message &&
+                progress.message.toLowerCase().includes("spotify")
+              ) {
+                progressData.stage = "Fetching Spotify tracks";
+              } else if (
+                progress.message &&
+                progress.message.toLowerCase().includes("match")
+              ) {
+                progressData.stage = "Matching tracks";
+              } else if (
+                progress.message &&
+                progress.message.toLowerCase().includes("database")
+              ) {
+                progressData.stage = "Loading database";
+              } else if (
+                progress.message &&
+                progress.message.toLowerCase().includes("crate")
+              ) {
+                progressData.stage = "Generating crate file";
+              } else if (
+                progress.message &&
+                progress.message.toLowerCase().includes("processing")
+              ) {
+                progressData.stage = "Processing tracks";
+              } else if (
+                progress.message &&
+                progress.message.toLowerCase().includes("import")
+              ) {
+                progressData.stage = "Importing playlist";
+              } else if (
+                progress.message &&
+                progress.message.toLowerCase().includes("fetching")
+              ) {
+                progressData.stage = "Fetching tracks";
+              } else if (
+                progress.message &&
+                progress.message.toLowerCase().includes("analyzing")
+              ) {
+                progressData.stage = "Analyzing tracks";
+              }
+            }
+
+            res.write(`data: ${JSON.stringify(progressData)}\n\n`);
           } catch (writeError) {
             console.error("Failed to write progress update:", writeError);
             throw new Error("Client disconnected");
@@ -1284,6 +1367,7 @@ app.get(
           type: "progress",
           progress: 90,
           message: "Processing complete, generating crate file...",
+          stage: "Generating crate file",
         })}\n\n`
       );
 
@@ -1391,7 +1475,8 @@ app.get(
         `data: ${JSON.stringify({
           type: "progress",
           progress: 100,
-          message: "Complete!",
+          message: "Processing complete!",
+          stage: "Complete",
         })}\n\n`
       );
 
@@ -1554,6 +1639,380 @@ app.get("/settings.html", (req, res) => {
 // Add route for /settings (without .html extension)
 app.get("/settings", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "settings.html"));
+});
+
+// Scan History API endpoints
+app.get("/api/scan-history", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log("📖 Fetching scan history for user:", userId);
+
+    // Get user's scan history (limit to 10 most recent)
+    const { data: scanHistory, error } = await supabase
+      .from("scan_history")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error("🔍 GET error details:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+
+      // Check if it's a table doesn't exist error
+      if (error.code === "42P01" || error.message.includes("does not exist")) {
+        console.log("✅ Scan history table does not exist yet");
+        return res.json({ scanHistory: [] });
+      }
+      console.error("❌ Error fetching scan history:", error);
+      return res.status(500).json({ error: "Failed to fetch scan history" });
+    }
+
+    console.log(
+      "✅ Scan history fetched successfully:",
+      scanHistory?.length || 0,
+      "items"
+    );
+    res.json({ scanHistory: scanHistory || [] });
+  } catch (error) {
+    console.error("❌ Error in scan history GET endpoint:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/scan-history", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      spotify_playlist_url,
+      spotify_playlist_name,
+      found_tracks_count,
+      missing_tracks_count,
+      total_tracks,
+      results,
+    } = req.body;
+
+    console.log("📝 Scan history POST request:", {
+      userId,
+      spotify_playlist_url,
+      spotify_playlist_name,
+      found_tracks_count,
+      missing_tracks_count,
+      total_tracks,
+      hasResults: !!results,
+      resultsSize: results ? JSON.stringify(results).length : 0,
+    });
+
+    // Validate required fields
+    if (!spotify_playlist_url) {
+      return res
+        .status(400)
+        .json({ error: "Spotify playlist URL is required" });
+    }
+
+    // Check if user already has 10 scans, if so, delete the oldest one
+    const { data: existingScans, error: countError } = await supabase
+      .from("scan_history")
+      .select("id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (countError) {
+      console.error("🔍 Count error details:", {
+        code: countError.code,
+        message: countError.message,
+        details: countError.details,
+        hint: countError.hint,
+      });
+
+      // Check if it's a table doesn't exist error
+      if (
+        countError.code === "42P01" ||
+        countError.message.includes("does not exist")
+      ) {
+        console.log("✅ Scan history table does not exist yet, skipping save");
+        return res.json({ success: true, scan: null });
+      }
+      console.error("❌ Error checking existing scans:", countError);
+      return res.status(500).json({ error: "Failed to check existing scans" });
+    }
+
+    // If user has 10 or more scans, delete the oldest one
+    if (existingScans && existingScans.length >= 10) {
+      const oldestScan = existingScans[0];
+      const { error: deleteError } = await supabase
+        .from("scan_history")
+        .delete()
+        .eq("id", oldestScan.id);
+
+      if (deleteError) {
+        console.error("Error deleting oldest scan:", deleteError);
+        // Continue anyway, as this is not critical
+      }
+    }
+
+    // Insert new scan history
+    const { data: newScan, error: insertError } = await supabase
+      .from("scan_history")
+      .insert({
+        user_id: userId,
+        spotify_playlist_url,
+        spotify_playlist_name: spotify_playlist_name || "Playlist",
+        found_tracks_count: found_tracks_count || 0,
+        missing_tracks_count: missing_tracks_count || 0,
+        total_tracks: total_tracks || 0,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("🔍 Insert error details:", {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+      });
+      return res.status(500).json({ error: "Failed to save scan history" });
+    }
+
+    console.log("✅ Scan history saved successfully:", newScan);
+
+    // If detailed results are provided, save them as JSON to scan_history
+    if (results && newScan && newScan.id) {
+      try {
+        console.log("📝 Saving detailed results to scan_history table");
+        console.log("📊 Results structure:", {
+          keys: Object.keys(results),
+          foundTracksCount: results.foundTracksList?.length || 0,
+          missingTracksCount: results.missingTracksList?.length || 0,
+          totalTracks: results.totalTracks || 0,
+        });
+
+        console.log(
+          "🔍 Sample found track data:",
+          results.foundTracksList?.[0]
+        );
+        console.log(
+          "🔍 Sample missing track data:",
+          results.missingTracksList?.[0]
+        );
+
+        // Update the scan_history record with the JSON results
+        const { error: updateError } = await supabase
+          .from("scan_history")
+          .update({ scan_results: results })
+          .eq("id", newScan.id);
+
+        if (updateError) {
+          console.error("Error saving scan results JSON:", updateError);
+          console.error("Update error details:", {
+            code: updateError.code,
+            message: updateError.message,
+            details: updateError.details,
+            hint: updateError.hint,
+          });
+          // Don't fail the request, just log the error
+        } else {
+          console.log(
+            "✅ Scan results saved as JSON to scan_history table successfully"
+          );
+        }
+      } catch (error) {
+        console.error("Error processing scan results JSON:", error);
+        console.error("Exception details:", error.message, error.stack);
+        // Don't fail the request, just log the error
+      }
+    } else {
+      console.log("⚠️ No results or newScan to save:", {
+        hasResults: !!results,
+        hasNewScan: !!newScan,
+        newScanId: newScan?.id,
+      });
+    }
+
+    res.json({ success: true, scan: newScan });
+  } catch (error) {
+    console.error("❌ Error in scan history POST endpoint:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get detailed scan results by scan ID
+app.get("/api/scan-history/:scanId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const scanId = req.params.scanId;
+
+    console.log(
+      "📖 Fetching detailed scan results for user:",
+      userId,
+      "scan:",
+      scanId
+    );
+
+    // First verify the scan belongs to the user
+    const { data: scanHistory, error: scanError } = await supabase
+      .from("scan_history")
+      .select("*")
+      .eq("id", scanId)
+      .eq("user_id", userId)
+      .single();
+
+    if (scanError || !scanHistory) {
+      console.error("❌ Scan not found or access denied:", scanError);
+      return res.status(404).json({ error: "Scan not found" });
+    }
+
+    // Get the detailed results from JSON
+    const scanResults = scanHistory.scan_results;
+
+    if (!scanResults) {
+      console.log("✅ No detailed results found for this scan");
+      return res.json({
+        scan: scanHistory,
+        tracks: [],
+        foundTracks: [],
+        missingTracks: [],
+      });
+    }
+
+    // Extract found and missing tracks from JSON
+    console.log("🔍 Extracting tracks from scan_results:", {
+      scanResultsKeys: Object.keys(scanResults || {}),
+      hasFoundTracksDetailed: !!(
+        scanResults && scanResults.foundTracksDetailed
+      ),
+      hasMissingTracksDetailed: !!(
+        scanResults && scanResults.missingTracksDetailed
+      ),
+      hasFoundTracksList: !!(scanResults && scanResults.foundTracksList),
+      hasMissingTracksList: !!(scanResults && scanResults.missingTracksList),
+      foundTracksDetailedLength: scanResults?.foundTracksDetailed?.length || 0,
+      missingTracksDetailedLength:
+        scanResults?.missingTracksDetailed?.length || 0,
+      foundTracksListLength: scanResults?.foundTracksList?.length || 0,
+      missingTracksListLength: scanResults?.missingTracksList?.length || 0,
+    });
+
+    // Extract detailed track data (with Serato info) from scan_results JSONB
+    const foundTracks =
+      scanResults.foundTracksDetailed &&
+      Array.isArray(scanResults.foundTracksDetailed)
+        ? scanResults.foundTracksDetailed
+        : scanResults.foundTracksList &&
+          Array.isArray(scanResults.foundTracksList)
+        ? scanResults.foundTracksList
+        : scanResults.foundTracks && Array.isArray(scanResults.foundTracks)
+        ? scanResults.foundTracks
+        : [];
+    const missingTracks =
+      scanResults.missingTracksDetailed &&
+      Array.isArray(scanResults.missingTracksDetailed)
+        ? scanResults.missingTracksDetailed
+        : scanResults.missingTracksList &&
+          Array.isArray(scanResults.missingTracksList)
+        ? scanResults.missingTracksList
+        : scanResults.missingTracks && Array.isArray(scanResults.missingTracks)
+        ? scanResults.missingTracks
+        : [];
+    const allTracks = [...foundTracks, ...missingTracks];
+
+    console.log("✅ Detailed scan results fetched successfully:", {
+      scanId,
+      totalTracks: allTracks.length,
+      foundTracks: foundTracks.length,
+      missingTracks: missingTracks.length,
+    });
+
+    // Log what we're actually returning
+    console.log("🔍 Returning to frontend:", {
+      foundTracksLength: foundTracks.length,
+      missingTracksLength: missingTracks.length,
+      foundTracksSample: foundTracks[0],
+      missingTracksSample: missingTracks[0],
+    });
+
+    res.json({
+      scan: scanHistory,
+      tracks: allTracks,
+      foundTracks,
+      missingTracks,
+    });
+  } catch (error) {
+    console.error("❌ Error in detailed scan results endpoint:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Delete individual scan history item
+app.delete("/api/scan-history/:scanId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const scanId = req.params.scanId;
+
+    console.log("🗑️ Deleting scan history item:", scanId, "for user:", userId);
+
+    // First verify the scan belongs to the user
+    const { data: scanHistory, error: scanError } = await supabase
+      .from("scan_history")
+      .select("id")
+      .eq("id", scanId)
+      .eq("user_id", userId)
+      .single();
+
+    if (scanError || !scanHistory) {
+      console.error("❌ Scan not found or access denied:", scanError);
+      return res.status(404).json({ error: "Scan not found" });
+    }
+
+    // Delete the scan
+    const { error: deleteError } = await supabase
+      .from("scan_history")
+      .delete()
+      .eq("id", scanId)
+      .eq("user_id", userId);
+
+    if (deleteError) {
+      console.error("❌ Error deleting scan:", deleteError);
+      return res.status(500).json({ error: "Failed to delete scan" });
+    }
+
+    console.log("✅ Scan history item deleted successfully:", scanId);
+    res.json({ success: true, message: "Scan deleted successfully" });
+  } catch (error) {
+    console.error("❌ Error in delete scan endpoint:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Delete all scan history for a user
+app.delete("/api/scan-history", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    console.log("🗑️ Deleting all scan history for user:", userId);
+
+    // Delete all scans for the user
+    const { error: deleteError } = await supabase
+      .from("scan_history")
+      .delete()
+      .eq("user_id", userId);
+
+    if (deleteError) {
+      console.error("❌ Error deleting all scans:", deleteError);
+      return res.status(500).json({ error: "Failed to delete scans" });
+    }
+
+    console.log("✅ All scan history deleted successfully for user:", userId);
+    res.json({ success: true, message: "All scans deleted successfully" });
+  } catch (error) {
+    console.error("❌ Error in delete all scans endpoint:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // Add static file serving

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan History - CrateMatch</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .history-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .history-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin: 0;
+        }
+        
+        .history-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .history-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #cbd5e1;
+            font-size: 0.875rem;
+        }
+        
+        .history-filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .filter-label {
+            color: #cbd5e1;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .filter-input {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            color: #f8fafc;
+            font-size: 0.875rem;
+        }
+        
+        .filter-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .history-item {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .history-item:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+        
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .history-item-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #f8fafc;
+            margin: 0;
+            flex: 1;
+        }
+        
+        .history-item-date {
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-left: 1rem;
+        }
+        
+        .history-item-url {
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            display: block;
+            word-break: break-all;
+        }
+        
+        .history-item-url:hover {
+            color: #60a5fa;
+            text-decoration: underline;
+        }
+        
+        .history-item-stats {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .history-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #cbd5e1;
+        }
+        
+        .history-stat-icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .history-stat-icon.found {
+            background: #10b981;
+        }
+        
+        .history-stat-icon.missing {
+            background: #ef4444;
+        }
+        
+        .history-item-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+        
+        .empty-history {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #94a3b8;
+        }
+        
+        .empty-history-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .empty-history h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #cbd5e1;
+        }
+        
+        .empty-history p {
+            margin-bottom: 2rem;
+        }
+        
+        .back-to-app {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .back-to-app:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .spotify-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+        
+        .spotify-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .history-container {
+                padding: 1rem;
+            }
+            
+            .history-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            
+            .history-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .history-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .history-filters {
+                flex-direction: column;
+            }
+            
+            .history-item-header {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .history-item-stats {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .history-item-actions {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-content">
+            <h3>Loading History...</h3>
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>CrateMatch</h1>
+                <span class="beta-label">BETA</span>
+            </div>
+            
+            <div class="user-info" id="user-info" style="display: none;">
+                <span class="user-email" id="user-email"></span>
+                <span class="subscription-status" id="subscription-status">Free</span>
+                <button class="upgrade-btn-header" id="upgrade-btn-header" style="display: none;">Upgrade to Pro</button>
+                <button class="settings-btn" id="settings-btn">Settings</button>
+                <button class="sign-out-btn" id="sign-out-btn">Sign Out</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="history-container">
+            <div class="history-header">
+                <h1 class="history-title">Scan History</h1>
+                <div class="history-controls">
+                    <button class="btn btn-secondary" id="refresh-history-btn">
+                        <span id="refresh-text">Refresh</span>
+                        <span id="refresh-spinner" class="loading-spinner" style="display: none;"></span>
+                    </button>
+                    <button class="btn btn-danger" id="delete-all-history-btn">Delete All</button>
+                    <a href="/app.html" class="back-to-app">Back to App</a>
+                </div>
+            </div>
+
+
+
+            <div class="history-filters" id="history-filters">
+                <div class="filter-group">
+                    <label class="filter-label">Search:</label>
+                    <input type="text" class="filter-input" id="search-filter" placeholder="Search playlists...">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Sort by:</label>
+                    <select class="filter-input" id="sort-filter">
+                        <option value="date-desc">Date (Newest)</option>
+                        <option value="date-asc">Date (Oldest)</option>
+                        <option value="name-asc">Name (A-Z)</option>
+                        <option value="name-desc">Name (Z-A)</option>
+                        <option value="tracks-desc">Tracks (High-Low)</option>
+                        <option value="tracks-asc">Tracks (Low-High)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="history-list" id="history-list">
+                <!-- History items will be populated here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Error modal -->
+    <div class="error-modal" id="error-modal">
+        <div class="error-content">
+            <div class="error-icon">⚠️</div>
+            <h3 class="error-title">Error</h3>
+            <p class="error-message" id="error-message">An error occurred.</p>
+            <button class="error-close" id="error-close">Close</button>
+        </div>
+    </div>
+
+    <!-- Track List Modal -->
+    <div class="track-modal" id="track-modal">
+        <div class="track-modal-content">
+            <div class="track-modal-header">
+                <h3 id="track-modal-title">Track List</h3>
+                <div class="track-modal-controls">
+                    <button class="view-toggle-btn active" id="table-view-btn">Table</button>
+                    <button class="view-toggle-btn" id="list-view-btn">List</button>
+                    <button class="track-modal-close" id="track-modal-close">×</button>
+                </div>
+            </div>
+            <div class="track-modal-body">
+                <div class="track-table-view" id="track-table-view">
+                    <table class="track-table" id="track-table">
+                        <thead>
+                            <tr>
+                                <th>Track (Spotify)</th>
+                                <th>Matched in Serato</th>
+                                <th>Similarity %</th>
+                                <th>Variations</th>
+                            </tr>
+                        </thead>
+                        <tbody id="track-table-body">
+                            <!-- Table rows will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="track-list-view" id="track-list-view" style="display: none;">
+                    <div class="track-list-text" id="track-list-text">
+                        <!-- List text will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="history.js"></script>
+</body>
+</html> 

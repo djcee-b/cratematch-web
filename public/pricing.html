@@ -208,6 +208,9 @@
       transition: all 0.3s ease;
       position: relative;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
 
     .pricing-option:hover {
@@ -283,6 +286,7 @@
     .plan-features {
       list-style: none;
       margin-bottom: 2rem;
+      flex-grow: 1;
     }
 
     .plan-features li {
@@ -317,6 +321,7 @@
       cursor: pointer;
       transition: all 0.3s ease;
       color: white;
+      margin-top: auto;
     }
 
     .monthly-btn, .yearly-btn {
@@ -663,7 +668,7 @@
       <div class="pricing-footer">
         <p>Cancel anytime • Secure payment processing</p>
         <div class="pricing-links">
-          <a href="/" class="back-link">← Back to App</a>
+          <a href="/" class="back-link" id="back-to-app-link">← Back to App</a>
           </div>
         </div>
       </div>
@@ -717,41 +722,76 @@
       <div class="modal-body">
         <div class="payment-completion-content">
           <div class="completion-header">
+            <div class="completion-icon">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7V10C2 16.075 6.925 21 13 21C19.075 21 24 16.075 24 10V7L12 2Z" fill="url(#gradient)"/>
+                <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <defs>
+                  <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
             <h4>Activate Your Subscription</h4>
             <p class="completion-description">Complete your subscription activation to unlock all premium features</p>
           </div>
           
           <div class="email-reminder">
             <div class="email-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z" fill="#fbbf24"/>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z" fill="#3b82f6"/>
               </svg>
             </div>
             <div class="email-info">
-              <span class="email-label">Payment Email:</span>
-              <span id="completion-email" class="email-value"></span>
-              <p class="email-warning">Be sure to use this email as your payment email otherwise your account won't apply. Any issues contact djceeb@gmail.com</p>
+              <div class="email-header">
+                <span class="email-label">Payment Email</span>
+                <span id="completion-email" class="email-value"></span>
+              </div>
+              <p class="email-warning">Use this email for payment to link your account. Contact <strong>djceeb@gmail.com</strong> for support.</p>
             </div>
           </div>
           
           <div class="completion-features">
-            <div class="feature-item">
-              <div class="feature-icon"></div>
-              <span>Unlimited playlist exports</span>
-            </div>
-            <div class="feature-item">
-              <div class="feature-icon"></div>
-              <span>Import history tracking</span>
-            </div>
-            <div class="feature-item">
-              <div class="feature-icon"></div>
-              <span>Advanced track matching</span>
+            <h5>Premium Features You'll Unlock</h5>
+            <div class="features-grid">
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" fill="#22c55e"/>
+                    <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <span>Unlimited playlist exports</span>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" fill="#22c55e"/>
+                    <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <span>Import history tracking</span>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" fill="#22c55e"/>
+                    <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <span>Advanced track matching</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
       <div class="modal-footer centered">
         <button class="primary-btn large" id="refresh-subscription-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4C7.58 4 4.01 7.58 4.01 12C4.01 16.42 7.58 20 12 20C15.73 20 18.84 17.45 19.73 14H17.65C16.83 16.33 14.61 18 12 18C8.69 18 6 15.31 6 12C6 8.69 8.69 6 12 6C13.66 6 15.14 6.69 16.22 7.78L13 11H20V4L17.65 6.35Z" fill="currentColor"/>
+          </svg>
           Refresh & Activate
         </button>
       </div>

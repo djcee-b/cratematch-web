@@ -7,7 +7,7 @@ const loadingOverlay = document.getElementById("loading-overlay");
 const userInfo = document.getElementById("user-info");
 const userEmail = document.getElementById("user-email");
 const subscriptionStatus = document.getElementById("subscription-status");
-const settingsBtn = document.getElementById("settings-btn");
+
 const signOutBtn = document.getElementById("sign-out-btn");
 
 // Settings elements
@@ -196,15 +196,6 @@ function updateTrialCountdown() {
 
 // Initialize event listeners
 function initializeEventListeners() {
-  // Settings button
-  if (settingsBtn) {
-    settingsBtn.addEventListener("click", () => {
-      if (settingsModal) {
-        settingsModal.style.display = "flex";
-      }
-    });
-  }
-
   // Modal close buttons
   if (settingsClose) {
     settingsClose.addEventListener("click", () => {
