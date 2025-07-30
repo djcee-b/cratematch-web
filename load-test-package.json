@@ -1,0 +1,25 @@
+{
+  "name": "cratematch-load-test",
+  "version": "1.0.0",
+  "description": "Load testing tool for CrateMatch server",
+  "main": "load-test.js",
+  "scripts": {
+    "test": "node load-test.js",
+    "test:light": "node load-test.js --users 10 --duration 60",
+    "test:medium": "node load-test.js --users 50 --duration 300",
+    "test:heavy": "node load-test.js --users 100 --duration 600",
+    "test:stress": "node load-test.js --users 200 --duration 900"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0"
+  },
+  "keywords": [
+    "load-testing",
+    "performance",
+    "cratematch",
+    "stress-testing"
+  ],
+  "author": "CrateMatch Team",
+  "license": "MIT"
+} 
