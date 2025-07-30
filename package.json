@@ -8,7 +8,12 @@
     "dev": "nodemon server.js",
     "build": "bash scripts/build.sh",
     "setup": "bash scripts/setup-public.sh",
-    "postinstall": "bash scripts/copy-public.sh"
+    "postinstall": "bash scripts/copy-public.sh",
+    "load-test": "node load-test.js",
+    "load-test-simple": "node load-test-simple.js",
+    "load-test-apache": "bash load-test-apache-bench.sh",
+    "load-test-wrk": "bash load-test-wrk.sh",
+    "load-test-all": "npm run load-test-simple && npm run load-test-apache && npm run load-test-wrk"
   },
   "dependencies": {
     "@musiclibrarytools/mlt.js": "^v5.1.20",
@@ -23,7 +28,9 @@
     "stripe": "^14.25.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0"
   },
   "keywords": [
     "serato",
