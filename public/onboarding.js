@@ -13,7 +13,7 @@ const continueBtn = document.getElementById("continueBtn");
 async function checkAuth() {
   const token = localStorage.getItem("authToken");
   if (!token) {
-    window.location.href = "/auth.html";
+    window.location.href = "/auth";
     return;
   }
 
@@ -31,12 +31,12 @@ async function checkAuth() {
     } else {
       // Token is invalid
       localStorage.removeItem("authToken");
-      window.location.href = "/auth.html";
+      window.location.href = "/auth";
     }
   } catch (error) {
     console.error("Auth check error:", error);
     localStorage.removeItem("authToken");
-    window.location.href = "/auth.html";
+    window.location.href = "/auth";
   }
 }
 
@@ -81,7 +81,10 @@ function setupDragAndDrop() {
 // Handle file upload
 async function handleFileUpload(file) {
   if (!isValidDatabaseFile(file)) {
-    showUploadStatus("Please select a valid database file.", "error");
+    showUploadStatus(
+      "Please select a file named 'database V2'. Only files with this exact name are accepted.",
+      "error"
+    );
     return;
   }
 
@@ -131,8 +134,8 @@ async function handleFileUpload(file) {
 
 // Validate database file
 function isValidDatabaseFile(file) {
-  // Accept any file type since database V2 files don't have extensions
-  return file && file.size > 0;
+  // Only accept files named "database V2"
+  return file && file.size > 0 && file.name === "database V2";
 }
 
 // Show upload status
@@ -140,11 +143,12 @@ function showUploadStatus(message, type) {
   uploadStatus.textContent = message;
   uploadStatus.className = `upload-status ${type}`;
   uploadStatus.style.display = "block";
+  uploadStatus.style.marginBottom = "15px";
 }
 
 // Continue to main app
 continueBtn.addEventListener("click", () => {
-  window.location.href = "/";
+  window.location.href = "/app";
 });
 
 // Initialize

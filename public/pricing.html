@@ -4,10 +4,567 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CrateMatch - Pricing</title>
-  <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      color: #f8fafc;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease-out;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-content {
+      text-align: center;
+      color: #f8fafc;
+    }
+
+    .loading-content h3 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #f8fafc;
+    }
+
+    .loading-content p {
+      font-size: 1rem;
+      color: #94a3b8;
+      margin-bottom: 2rem;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(148, 163, 184, 0.2);
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Header */
+    .header {
+      padding: 1.5rem 0;
+      border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: #f8fafc;
+    }
+
+    .logo h1 {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: #f8fafc;
+    }
+
+    .beta-label {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .user-details {
+      text-align: right;
+    }
+
+    .user-email {
+      display: block;
+      font-size: 0.875rem;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .subscription-status {
+      display: block;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    .settings-btn, .sign-out-btn {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #3b82f6;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .settings-btn:hover, .sign-out-btn:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: #3b82f6;
+    }
+
+    /* Main content */
+    .main-content {
+      padding: 4rem 0;
+    }
+
+    .pricing-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .pricing-header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .pricing-header h2 {
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 900;
+      color: #f8fafc;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .pricing-header p {
+      font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+      color: #cbd5e1;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Pricing options */
+    .pricing-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .pricing-option {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 1rem;
+      padding: 2rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pricing-option:hover {
+      transform: translateY(-5px);
+      border-color: #3b82f6;
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+    }
+
+    .pricing-option::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    }
+
+    .yearly-option {
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.1);
+      transform: scale(1.05);
+    }
+
+    .yearly-option:hover {
+      transform: scale(1.05) translateY(-5px);
+    }
+
+    .lifetime-option::before {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .plan-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .plan-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 0.5rem;
+    }
+
+    .plan-price {
+      font-size: 3rem;
+      font-weight: 900;
+      color: #f8fafc;
+      line-height: 1;
+    }
+
+    .plan-period {
+      font-size: 1rem;
+      color: #94a3b8;
+      margin-top: 0.5rem;
+    }
+
+    .plan-savings {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-top: 1rem;
+      display: inline-block;
+    }
+
+    .lifetime-option .plan-savings {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .plan-features {
+      list-style: none;
+      margin-bottom: 2rem;
+    }
+
+    .plan-features li {
+      padding: 0.75rem 0;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+            .plan-features li::before {
+            content: '';
+            width: 1rem;
+            height: 1rem;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2310b981' viewBox='0 0 24 24'%3E%3Cpath d='M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z'/%3E%3C/svg%3E") no-repeat center;
+            background-size: contain;
+            flex-shrink: 0;
+        }
+
+    .feature-highlight {
+      color: #f8fafc !important;
+      font-weight: 600;
+    }
+
+    .upgrade-btn {
+      width: 100%;
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: white;
+    }
+
+    .monthly-btn, .yearly-btn {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+    }
+
+    .monthly-btn:hover, .yearly-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.35);
+    }
+
+    .lifetime-btn {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+    }
+
+    .lifetime-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.35);
+    }
+
+    .pricing-footer {
+      text-align: center;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(59, 130, 246, 0.1);
+    }
+
+    .pricing-footer p {
+      color: #94a3b8;
+      margin-bottom: 1.5rem;
+    }
+
+    .back-link {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+
+    .back-link:hover {
+      color: #60a5fa;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+
+    .modal {
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 1rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      color: #f8fafc;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      width: 2rem;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(148, 163, 184, 0.1);
+      color: #f8fafc;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-footer {
+      padding: 1.5rem;
+      border-top: 1px solid rgba(59, 130, 246, 0.1);
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+
+    .modal-footer.centered {
+      justify-content: center;
+    }
+
+    .primary-btn, .secondary-btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+    }
+
+    .primary-btn.large {
+      padding: 1rem 2rem;
+      font-size: 1.125rem;
+    }
+
+    .feature-icon {
+      width: 1rem;
+      height: 1rem;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2310b981' viewBox='0 0 24 24'%3E%3Cpath d='M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z'/%3E%3C/svg%3E") no-repeat center;
+      background-size: contain;
+      flex-shrink: 0;
+    }
+
+    .payment-icon {
+      width: 3rem;
+      height: 3rem;
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+      position: relative;
+    }
+
+    .payment-icon::before {
+      content: '';
+      width: 1.5rem;
+      height: 1.5rem;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 24 24'%3E%3Cpath d='M20,4H4C2.9,4 2,4.9 2,6V18C2,19.1 2.9,20 4,20H20C21.1,20 22,19.1 22,18V6C22,4.9 21.1,4 20,4M20,18H4V12H20V18M20,8H4V6H20V8Z'/%3E%3C/svg%3E") no-repeat center;
+      background-size: contain;
+    }
+
+    .instruction-icon {
+      width: 1.25rem;
+      height: 1.25rem;
+      display: inline-block;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+
+    .instruction-item:nth-child(1) .instruction-icon {
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23f59e0b' viewBox='0 0 24 24'%3E%3Cpath d='M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z'/%3E%3C/svg%3E") no-repeat center;
+      background-size: contain;
+    }
+
+    .instruction-item:nth-child(2) .instruction-icon {
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2310b981' viewBox='0 0 24 24'%3E%3Cpath d='M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z'/%3E%3C/svg%3E") no-repeat center;
+      background-size: contain;
+    }
+
+    .instruction-item:nth-child(3) .instruction-icon {
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%233b82f6' viewBox='0 0 24 24'%3E%3Cpath d='M12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31L23.31,12L20,8.69Z'/%3E%3C/svg%3E") no-repeat center;
+      background-size: contain;
+    }
+
+    .secondary-btn {
+      background: rgba(148, 163, 184, 0.1);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .secondary-btn:hover {
+      background: rgba(148, 163, 184, 0.2);
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 1rem;
+      }
+      
+      .header-content {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      
+      .user-info {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .main-content {
+        padding: 3rem 0;
+      }
+      
+      .pricing-options {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      
+      .pricing-option {
+        padding: 1.5rem;
+      }
+      
+      .yearly-option {
+        transform: none;
+      }
+      
+      .yearly-option:hover {
+        transform: translateY(-5px);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .container {
+        padding: 0 3rem;
+      }
+    }
+  </style>
 </head>
 <body>
   <!-- Loading overlay to prevent flash -->
@@ -21,6 +578,7 @@
 
   <!-- Header with user info -->
   <header class="header">
+    <div class="container">
     <div class="header-content">
       <div class="logo">
         <h1>CrateMatch <span class="beta-label">beta</span></h1>
@@ -32,12 +590,14 @@
         </div>
         <button class="settings-btn" id="settings-btn">Settings</button>
         <button class="sign-out-btn" id="sign-out-btn">Sign Out</button>
+        </div>
       </div>
     </div>
   </header>
 
   <!-- Main content -->
   <main class="main-content">
+    <div class="container">
     <div class="pricing-container">
       <div class="pricing-header">
         <h2>Choose Your Plan</h2>
@@ -104,12 +664,11 @@
         <p>Cancel anytime • Secure payment processing</p>
         <div class="pricing-links">
           <a href="/" class="back-link">← Back to App</a>
+          </div>
         </div>
       </div>
     </div>
   </main>
-
-
 
   <!-- Payment Instructions Modal -->
   <div class="modal-overlay" id="payment-instructions-modal" style="display: none;">
@@ -120,19 +679,19 @@
       </div>
       <div class="modal-body">
         <div class="payment-instructions-content">
-          <div class="payment-icon">💳</div>
+          <div class="payment-icon"></div>
           <h4>Important Payment Instructions</h4>
           <div class="instructions-list">
             <div class="instruction-item">
-              <span class="instruction-icon">⚠️</span>
+              <span class="instruction-icon"></span>
               <span><strong>Email Address:</strong> You MUST use the same email address as your CrateMatch account: <span id="payment-email" class="highlight-email"></span></span>
             </div>
             <div class="instruction-item">
-              <span class="instruction-icon">✅</span>
+                              <span class="instruction-icon"></span>
               <span>Complete your payment on the Stripe page</span>
             </div>
             <div class="instruction-item">
-              <span class="instruction-icon">🔄</span>
+                              <span class="instruction-icon"></span>
               <span>Return to this page and click "Refresh" to activate your subscription</span>
             </div>
           </div>
@@ -177,15 +736,15 @@
           
           <div class="completion-features">
             <div class="feature-item">
-              <div class="feature-icon">✓</div>
+              <div class="feature-icon"></div>
               <span>Unlimited playlist exports</span>
             </div>
             <div class="feature-item">
-              <div class="feature-icon">✓</div>
+              <div class="feature-icon"></div>
               <span>Import history tracking</span>
             </div>
             <div class="feature-item">
-              <div class="feature-icon">✓</div>
+              <div class="feature-icon"></div>
               <span>Advanced track matching</span>
             </div>
           </div>
@@ -217,15 +776,15 @@
           <p>Your subscription has been activated. You now have access to unlimited exports and all premium features.</p>
           <div class="success-features">
             <div class="feature-item">
-              <div class="feature-icon">✓</div>
+              <div class="feature-icon"></div>
               <span>Unlimited playlist exports</span>
             </div>
             <div class="feature-item">
-              <div class="feature-icon">✓</div>
+              <div class="feature-icon"></div>
               <span>Import history tracking</span>
             </div>
             <div class="feature-item">
-              <div class="feature-icon">✓</div>
+              <div class="feature-icon"></div>
               <span>Advanced track matching</span>
             </div>
           </div>

@@ -3,237 +3,1032 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CrateMatch - Spotify to Serato Crate Converter</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>CrateMatch - Convert Spotify Playlists to Serato Crates</title>
+    <meta name="description" content="Convert any Spotify playlist into a Serato crate by matching tracks from your existing music library. Automate your DJ workflow.">
+    <meta name="keywords" content="spotify playlist, serato crate, DJ software, music automation, playlist conversion, DJ workflow">
+    <meta name="author" content="MLT">
+    <link rel="icon" type="image/png" href="Logo.png">
+    <link rel="preload" href="https://raw.githubusercontent.com/djcee-b/CrateLink-Public/master/demos/Match.mp4" as="video" type="video/mp4">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+                 body {
+             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+             background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+             color: #f8fafc;
+             line-height: 1.6;
+             overflow-x: hidden;
+         }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Header */
+        .header {
+            padding: 1.5rem 0;
+            position: relative;
+            z-index: 10;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #f8fafc;
+            text-decoration: none;
+        }
+
+        .logo img {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            border: 2px solid #3b82f6;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 4rem 0 6rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+            color: #cbd5e1;
+            margin-bottom: 2.5rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .primary-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.125rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 200px;
+            justify-content: center;
+        }
+
+        .primary-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(59, 130, 246, 0.4);
+        }
+
+        .secondary-button {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 200px;
+            justify-content: center;
+        }
+
+        .secondary-button:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+        }
+
+        /* Video Section */
+        .video-section {
+            padding: 2rem 0 4rem;
+        }
+
+        .video-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .video-wrapper {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: #000;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .video-wrapper:hover {
+            transform: scale(1.02);
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4rem;
+            height: 4rem;
+            background: rgba(59, 130, 246, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .play-button:hover {
+            background: #3b82f6;
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .play-button svg {
+            width: 1.5rem;
+            height: 1.5rem;
+            fill: white;
+            margin-left: 0.25rem;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 4rem 0;
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            margin-bottom: 3rem;
+            color: #f8fafc;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: rgba(30, 41, 59, 0.5);
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: #3b82f6;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+        }
+
+        .feature-icon {
+            width: 3rem;
+            height: 3rem;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #f8fafc;
+        }
+
+        .feature-card p {
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        /* Download Section */
+        .download-section {
+            padding: 4rem 0;
+            text-align: center;
+        }
+
+        .download-section h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: #f8fafc;
+        }
+
+        .download-section p {
+            font-size: 1.125rem;
+            color: #cbd5e1;
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .download-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .download-card {
+            background: rgba(30, 41, 59, 0.5);
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .download-card:hover {
+            transform: translateY(-5px);
+            border-color: #3b82f6;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+        }
+
+        .download-icon {
+            width: 3rem;
+            height: 3rem;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .download-card h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+                 .download-card p {
+             font-size: 0.875rem;
+             color: #cbd5e1;
+             margin: 0;
+         }
+
+         /* Pricing Section */
+         .pricing-section {
+             padding: 4rem 0;
+             background: rgba(15, 23, 42, 0.3);
+         }
+
+         .pricing-section h2 {
+             text-align: center;
+             font-size: clamp(2rem, 4vw, 3rem);
+             font-weight: 800;
+             margin-bottom: 1rem;
+             color: #f8fafc;
+         }
+
+         .pricing-section > .container > p {
+             text-align: center;
+             font-size: 1.125rem;
+             color: #cbd5e1;
+             margin-bottom: 3rem;
+             max-width: 600px;
+             margin-left: auto;
+             margin-right: auto;
+         }
+
+         .pricing-grid {
+             display: grid;
+             grid-template-columns: repeat(4, 1fr);
+             gap: 1rem;
+             max-width: 1200px;
+             margin: 0 auto;
+         }
+
+         .pricing-card {
+             background: rgba(30, 41, 59, 0.5);
+             border: 1px solid rgba(59, 130, 246, 0.2);
+             border-radius: 1rem;
+             padding: 1.5rem;
+             position: relative;
+             transition: all 0.3s ease;
+             display: flex;
+             flex-direction: column;
+             height: 100%;
+         }
+
+         .pricing-card:hover {
+             transform: translateY(-5px);
+             border-color: #3b82f6;
+             box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+         }
+
+         .pricing-card.featured {
+             border-color: #3b82f6;
+             background: rgba(59, 130, 246, 0.1);
+             transform: scale(1.05);
+         }
+
+         .pricing-card.featured:hover {
+             transform: scale(1.05) translateY(-5px);
+         }
+
+         .pricing-badge {
+             position: absolute;
+             top: -1rem;
+             left: 50%;
+             transform: translateX(-50%);
+             background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+             color: white;
+             padding: 0.5rem 1rem;
+             border-radius: 2rem;
+             font-size: 0.875rem;
+             font-weight: 600;
+         }
+
+         .pricing-header {
+             text-align: center;
+             margin-bottom: 1.5rem;
+         }
+
+         .pricing-header h3 {
+             font-size: 1.25rem;
+             font-weight: 700;
+             color: #f8fafc;
+             margin-bottom: 0.5rem;
+         }
+
+         .price {
+             font-size: 2.5rem;
+             font-weight: 900;
+             color: #f8fafc;
+             line-height: 1;
+         }
+
+         .price span {
+             font-size: 1rem;
+             font-weight: 400;
+             color: #cbd5e1;
+         }
+
+         .pricing-subtitle {
+             font-size: 0.875rem;
+             font-weight: 500;
+             color: #10b981;
+             margin-top: 0.5rem;
+             text-transform: uppercase;
+             letter-spacing: 0.05em;
+         }
+
+         .pricing-features {
+             margin-bottom: 1.5rem;
+             flex-grow: 1;
+         }
+
+         .feature-item {
+             display: flex;
+             align-items: center;
+             gap: 0.5rem;
+             margin-bottom: 0.75rem;
+             color: #cbd5e1;
+             font-size: 0.875rem;
+         }
+
+         .feature-item svg {
+             color: #10b981;
+             flex-shrink: 0;
+             width: 16px;
+             height: 16px;
+         }
+
+         .pricing-button {
+             width: 100%;
+             padding: 0.75rem;
+             border-radius: 0.75rem;
+             text-decoration: none;
+             font-weight: 600;
+             text-align: center;
+             transition: all 0.3s ease;
+             border: 2px solid transparent;
+             display: block;
+             font-size: 0.875rem;
+         }
+
+         .pricing-button:not(.featured) {
+             background: rgba(59, 130, 246, 0.1);
+             color: #3b82f6;
+             border-color: rgba(59, 130, 246, 0.3);
+         }
+
+         .pricing-button:not(.featured):hover {
+             background: rgba(59, 130, 246, 0.2);
+             border-color: #3b82f6;
+             transform: translateY(-2px);
+         }
+
+         .pricing-button.featured {
+             background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+             color: white;
+         }
+
+         .pricing-button.featured:hover {
+             transform: translateY(-2px);
+             box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+         }
+
+         .pricing-note {
+             text-align: center;
+             margin-top: 2rem;
+         }
+
+         .pricing-note p {
+             color: #64748b;
+             font-size: 0.875rem;
+             font-weight: 500;
+         }
+
+
+
+         /* Footer */
+        .footer {
+            padding: 3rem 0 2rem;
+            border-top: 1px solid rgba(59, 130, 246, 0.2);
+            text-align: center;
+        }
+
+        .footer p {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .modal-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: -3rem;
+            right: 0;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+                 /* Responsive */
+         @media (min-width: 768px) {
+             .hero-buttons {
+                 flex-direction: row;
+                 justify-content: center;
+             }
+
+             .container {
+                 padding: 0 2rem;
+             }
+         }
+
+         @media (max-width: 1023px) {
+             .pricing-grid {
+                 grid-template-columns: repeat(2, 1fr);
+                 gap: 1rem;
+             }
+         }
+
+         @media (max-width: 639px) {
+             .pricing-grid {
+                 grid-template-columns: 1fr;
+                 gap: 1rem;
+             }
+         }
+
+        @media (min-width: 1024px) {
+            .container {
+                padding: 0 3rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid #3b82f6;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-  <!-- Loading overlay to prevent flash -->
-  <div class="loading-overlay" id="loading-overlay">
-    <div class="loading-content">
-      <div class="spinner"></div>
-      <h3>Loading CrateMatch...</h3>
-      <p>Checking your session...</p>
-    </div>
-  </div>
-
-  <!-- Header with user info -->
+    <!-- Header -->
   <header class="header">
-    <div class="header-content">
-      <div class="logo">
-        <h1>CrateMatch <span class="beta-label">beta</span></h1>
-      </div>
-      <div class="user-info" id="user-info" style="display: none;">
-        <div class="user-details">
-          <span class="user-email" id="user-email"></span>
-          <span class="subscription-status" id="subscription-status"></span>
-        </div>
-        <button class="settings-btn" id="settings-btn">Settings</button>
-        <button class="sign-out-btn" id="sign-out-btn">Sign Out</button>
-      </div>
+        <div class="container">
+            <nav class="nav">
+                <a href="#" class="logo">
+                    <span>CrateMatch</span>
+                </a>
+                <a href="/auth?mode=signin" class="cta-button">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                    </svg>
+                    Sign In
+                </a>
+            </nav>
     </div>
   </header>
 
-  <!-- Database Status Bar -->
-  <div class="database-status-bar" id="database-status-bar" style="display: none;">
-    <div class="status-bar-content">
-      <div class="status-indicator">
-        <div class="status-dot"></div>
-        <span class="status-text">Database Ready</span>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1 class="animate-fade-in-up">Convert Spotify Playlists to Serato Crates in One Click</h1>
+            <p class="animate-fade-in-up">Transform any Spotify playlist into a Serato crate by matching tracks from your existing music library. Automate your DJ workflow.</p>
+            
+                        <div class="hero-buttons animate-fade-in-up">
+                <a href="/auth?mode=signup" class="primary-button">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                    </svg>
+                    Get Started
+                </a>
       </div>
-      <div class="database-meta">
-        <span class="last-updated">Last updated: <span id="database-date">Loading...</span></span>
-      </div>
-    </div>
-  </div>
+        </div>
+    </section>
 
-  <!-- Main content -->
-  <main class="main-content">
-    <!-- Upgrade Banner for Free Users -->
-    <div class="upgrade-banner" id="upgrade-banner" style="display: none;">
-      <div class="banner-content">
-        <div class="banner-text">
-          <h3>Upgrade to Pro</h3>
-          <p>Unlock unlimited exports and advanced features</p>
-        </div>
-        <button class="upgrade-btn-banner" id="upgrade-btn-banner">Upgrade Now</button>
-      </div>
-    </div>
-
-    <!-- Process Playlist Section -->
-    <section class="process-section" id="process-section">
-      <div class="section-header">
-        <h2>Convert Spotify Playlist to Serato Crate</h2>
-        <p>Paste your Spotify playlist URL below to get started</p>
-      </div>
-      <div class="section-content">
-        <div class="form-group">
-          <label for="playlistUrl">Spotify Playlist URL</label>
-          <input type="url" id="playlistUrl" placeholder="https://open.spotify.com/playlist/..." required>
-        </div>
-        <div class="form-group">
-          <label for="threshold">Match Threshold</label>
-          <div class="threshold-buttons">
-            <button class="threshold-btn orange" data-value="80" id="threshold-80">
-              <div class="btn-percent">80%</div>
-              <div class="btn-label">Loose</div>
-            </button>
-            <button class="threshold-btn blue active" data-value="90" id="threshold-90">
-              <div class="btn-percent">90%</div>
-              <div class="btn-label">Standard</div>
-            </button>
-            <button class="threshold-btn green" data-value="100" id="threshold-100">
-              <div class="btn-percent">100%</div>
-              <div class="btn-label">Exact</div>
+    <!-- Video Section -->
+    <section class="video-section" id="video-section">
+        <div class="container">
+            <div class="video-container">
+                <div class="video-wrapper" onclick="openVideoModal()">
+                    <video class="video-thumbnail" muted loop autoplay playsinline>
+                        <source src="https://raw.githubusercontent.com/djcee-b/CrateLink-Public/master/demos/Match.mp4" type="video/mp4">
+                    </video>
+                    <button class="play-button">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
             </button>
           </div>
-          <input type="hidden" id="threshold" value="90">
-          <div class="threshold-value">
-            <span id="thresholdValue">90%</span>
           </div>
-          <div class="threshold-example-box">
-            <div class="example-header">Example <span id="examplePercent">90</span>% match:</div>
-            <div class="example-track" id="exampleTrack">Doo Wop - ms lauryn hill → Doo Wop - lauryn hill</div>
-            <div class="example-explanation" id="exampleExplanation">Minor difference: The spotify track has "ms" before the artist, but the Serato Version does not. Small missing words are allowed.</div>
-          </div>
-        </div>
-        <button class="process-btn" id="process-btn" disabled>Process Playlist</button>
       </div>
     </section>
 
-    <!-- Results Section -->
-    <section class="results-section" id="results-section" style="display: none;">
-      <div class="section-header">
-        <h2>Processing Complete</h2>
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2>Why Choose CrateMatch?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" fill="white" viewBox="0 0 16 16">
+                            <path d="M8 3a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5H6a.5.5 0 0 1 0-1h1.5V3.5A.5.5 0 0 1 8 3zm3.5 1a.5.5 0 0 1 .5.5v1.5H12a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5V4.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M3.732 2.732a.5.5 0 0 1 .707 0l1.414 1.414a.5.5 0 1 1-.707.707L3.732 3.439a.5.5 0 0 1 0-.707zM2.5 8a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                            <path d="M8 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5H6a.5.5 0 0 1 0-1h1.5v-1.5A.5.5 0 0 1 8 13zm3.5 1a.5.5 0 0 1 .5.5v1.5H12a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5V14.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M12.268 12.268a.5.5 0 0 1 .707 0l1.414 1.414a.5.5 0 0 1-.707.707l-1.414-1.414a.5.5 0 0 1 0-.707z"/>
+                        </svg>
+                    </div>
+                    <h3>Lightning Fast</h3>
+                    <p>Process hundreds of tracks in seconds with our optimized matching algorithm.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" fill="white" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                        </svg>
+                    </div>
+                    <h3>Smart Matching</h3>
+                    <p>Advanced algorithms find the best matches from your existing Serato library.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" fill="white" viewBox="0 0 16 16">
+                            <path d="M8 0C3.582 0 0 3.582 0 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zM4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5z"/>
+                        </svg>
+                    </div>
+                    <h3>Ready to Use</h3>
+                    <p>Download .crate files that work instantly in Serato DJ Pro.</p>
+                </div>
       </div>
-      <div class="section-content">
-        <div class="results-summary" id="results-summary"></div>
-        <div class="results-details" id="results-details"></div>
-        <div class="download-section" id="download-section" style="display: none;">
-          <button class="download-btn" id="download-btn">Download .crate File</button>
-        </div>
-        <button class="new-playlist-btn" id="new-playlist-btn">Process Another Playlist</button>
       </div>
     </section>
-  </main>
 
-  <!-- Processing overlay -->
-  <div class="processing-overlay" id="processing-overlay" style="display: none;">
-    <div class="processing-content">
-      <div class="spinner"></div>
-      <h3>Processing Playlist...</h3>
-      <p id="processing-message">This may take a few moments depending on the playlist size.</p>
-      <div class="processing-warning">
-        <div class="warning-icon">⚠️</div>
-        <p><strong>Don't close this window!</strong> Your crate will not be created if you leave this page.</p>
+         <!-- Pricing Section -->
+     <section class="pricing-section">
+         <div class="container">
+             <h2>Simple, Transparent Pricing</h2>
+             <p>Choose the plan that works best for your DJ workflow</p>
+             
+             <div class="pricing-grid">
+                 <div class="pricing-card">
+                     <div class="pricing-header">
+                         <h3>Free</h3>
+                         <div class="price">£0<span>/month</span></div>
+                     </div>
+                     <div class="pricing-features">
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>50 track playlists</span>
+                         </div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>1 export per day</span>
       </div>
-      <div class="progress-container" id="progress-container" style="display: none;">
-        <div class="progress-bar">
-          <div class="progress-fill" id="progress-fill"></div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>Basic matching</span>
         </div>
-        <div class="progress-text" id="progress-text">0%</div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>7-day trial</span>
       </div>
     </div>
+                     <a href="/auth?mode=signup" class="pricing-button">Choose Free</a>
   </div>
 
-  <!-- Error modal -->
-  <div class="modal-overlay" id="error-modal" style="display: none;">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Error</h3>
-        <button class="modal-close" id="error-close">×</button>
+                 <div class="pricing-card">
+                     <div class="pricing-header">
+                         <h3>Monthly</h3>
+                         <div class="price">£2.99<span>/month</span></div>
+                     </div>
+                     <div class="pricing-features">
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>Unlimited exports</span>
+                         </div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>1000 track playlists</span>
       </div>
-      <div class="modal-content">
-        <p id="error-message"></p>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>View Import History</span>
       </div>
-      <div class="modal-actions">
-        <button class="btn-secondary" id="error-ok">OK</button>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>See all track variations</span>
       </div>
     </div>
+                     <a href="/auth?mode=signup" class="pricing-button">Choose Monthly</a>
   </div>
 
-  <!-- Settings modal -->
-  <div class="modal-overlay" id="settings-modal" style="display: none;">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Settings</h3>
-        <button class="modal-close" id="settings-close">×</button>
+                 <div class="pricing-card featured">
+                     <div class="pricing-badge">SAVE 30%</div>
+                     <div class="pricing-header">
+                         <h3>Yearly</h3>
+                         <div class="price">£24.99<span>/year</span></div>
       </div>
-      <div class="modal-content">
-        <div class="settings-section">
-          <h4>Database File</h4>
-          <p>Update your Serato database file. This will overwrite your existing database file.</p>
-          <div class="upload-area-small" id="settings-upload-area">
-            <div class="upload-icon">📁</div>
-            <p>Drag and drop your new database file here, or click to browse</p>
-            <button class="upload-btn-small" id="settings-upload-btn">Choose File</button>
-            <input type="file" id="settingsDatabaseFile" accept="*" style="display: none;">
+                     <div class="pricing-features">
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>Unlimited exports</span>
           </div>
-          <div class="upload-status" id="settings-upload-status" style="display: none;">
-            <div class="status-message" id="settings-upload-message"></div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>1000 track playlists</span>
           </div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>View Import History</span>
+        </div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>See all track variations</span>
+      </div>
+    </div>
+                     <a href="/auth?mode=signup" class="pricing-button featured">Choose Yearly</a>
+  </div>
+
+                 <div class="pricing-card">
+                     <div class="pricing-badge">BEST VALUE</div>
+                     <div class="pricing-header">
+                         <h3>Lifetime</h3>
+                         <div class="price">£34.99</div>
+                         <div class="pricing-subtitle">One Time Payment</div>
+                     </div>
+                     <div class="pricing-features">
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>Unlimited exports</span>
+      </div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>1000 track playlists</span>
+        </div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>View Import History</span>
+          </div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>See all track variations</span>
+          </div>
+                         <div class="feature-item">
+                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                 <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                             </svg>
+                             <span>Lifetime access</span>
         </div>
       </div>
+                     <a href="/auth?mode=signup" class="pricing-button">Choose Lifetime</a>
     </div>
   </div>
 
-  <!-- Track Details Modal -->
-  <div class="modal-overlay" id="track-details-modal" style="display: none;">
-    <div class="modal large-modal">
-      <div class="modal-header">
-        <h3 id="track-details-title">Track Details</h3>
-        <button class="modal-close" id="track-details-close">×</button>
+             <div class="pricing-note">
+                 <p>All plans include a 7-day free trial • Cancel anytime</p>
+             </div>
+         </div>
+     </section>
+
+     <!-- Download Section -->
+     <section class="download-section">
+        <div class="container">
+            <h2>Get the Desktop Version</h2>
+            <p>Download CrateMatch for your Mac and enjoy the full desktop experience with offline processing.</p>
+            
+            <div class="download-options">
+                <a href="https://github.com/djcee-b/MLT-Importer-Releases/releases/latest/download/CrateMatch.dmg" class="download-card">
+                    <div class="download-icon">
+                        <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
+                            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                        </svg>
+    </div>
+                    <h3>Intel Mac</h3>
+                    <p>macOS 10.15+</p>
+                </a>
+                
+                <a href="https://github.com/djcee-b/MLT-Importer-Releases/releases/latest/download/CrateMatch-arm64.dmg" class="download-card">
+                    <div class="download-icon">
+                        <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+    </div>
+                    <h3>Apple Silicon</h3>
+                    <p>M1 / M2 / M3 / M4</p>
+                </a>
+    </div>
+  </div>
+    </section>
+
+         <!-- Footer -->
+     <footer class="footer">
+         <div class="container">
+             <p>&copy; 2024 CrateMatch. All rights reserved.</p>
       </div>
+     </footer>
+
+
+
+    <!-- Video Modal -->
+    <div class="modal" id="videoModal">
       <div class="modal-content">
-        <div class="table-tabs">
-          <button class="tab-btn active" data-tab="found" id="found-tab-btn">Found Tracks</button>
-          <button class="tab-btn" data-tab="missing" id="missing-tab-btn">Missing Tracks</button>
-        </div>
-        
-        <div class="table-content">
-          <div class="table-tab active" id="found-tab">
-            <div id="found-tracks-content"></div>
-          </div>
-          <div class="table-tab" id="missing-tab">
-            <div id="missing-tracks-content"></div>
-          </div>
-        </div>
+            <button class="modal-close" onclick="closeVideoModal()">&times;</button>
+            <video class="modal-video" controls>
+                <source src="https://raw.githubusercontent.com/djcee-b/CrateLink-Public/master/demos/Match.mp4" type="video/mp4">
+            </video>
       </div>
     </div>
-  </div>
 
-  <!-- Text List Modal -->
-  <div class="text-list-modal" id="text-list-modal">
-    <div class="text-list-header">
-      <h3 class="text-list-title">Missing Tracks - Copy & Paste List</h3>
-      <button class="text-list-close" id="text-list-close">×</button>
-    </div>
-    <div class="text-list-content">
-      <div class="text-list-tracks" id="text-list-tracks"></div>
-    </div>
-    <div class="text-list-actions">
-      <button class="text-list-copy" id="text-list-copy">📋 Copy to Clipboard</button>
-    </div>
-  </div>
+    <script>
+        // Video modal
+        function openVideoModal() {
+            const modal = document.getElementById('videoModal');
+            const video = modal.querySelector('.modal-video');
+            modal.classList.add('active');
+            video.play();
+        }
 
-  <!-- Subscription expired modal -->
-  <div class="modal-overlay" id="subscription-modal" style="display: none;">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Trial Expired</h3>
-        <button class="modal-close" id="subscription-close">×</button>
-      </div>
-      <div class="modal-content">
-        <p>Your 7-day free trial has expired. Please upgrade to continue using CrateMatch.</p>
-        <div class="subscription-options">
-          <a href="https://buy.stripe.com/8x2dR938FdTEdGHestdMI0d" target="_blank" class="btn-primary">Upgrade Now</a>
-        </div>
-      </div>
-    </div>
-  </div>
+        function closeVideoModal() {
+            const modal = document.getElementById('videoModal');
+            const video = modal.querySelector('.modal-video');
+            modal.classList.remove('active');
+            video.pause();
+        }
 
-  <script src="script.js"></script>
+        // Close modal on outside click
+        document.getElementById('videoModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeVideoModal();
+            }
+        });
+
+        // Close modal on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeVideoModal();
+            }
+        });
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+                 // Observe elements for animation
+         document.querySelectorAll('.feature-card, .download-card, .pricing-card').forEach(el => {
+             el.style.opacity = '0';
+             el.style.transform = 'translateY(30px)';
+             el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+             observer.observe(el);
+         });
+    </script>
 </body>
 </html> 

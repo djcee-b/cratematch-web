@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Enhanced static file serving with logging
+// Enhanced static file serving with logging (moved after routes)
 const publicPath = path.join(__dirname, "public");
 console.log(`📁 Public directory path: ${publicPath}`);
 console.log(`📁 Public directory exists: ${fs.existsSync(publicPath)}`);
@@ -36,9 +36,8 @@ if (fs.existsSync(publicPath)) {
   });
 
   if (files.length > 0) {
-    app.use(express.static(publicPath));
     staticServed = true;
-    console.log(`✅ Static files served from: ${publicPath}`);
+    console.log(`✅ Static files will be served from: ${publicPath}`);
   } else {
     console.log(`⚠️  Public directory is empty`);
   }
@@ -60,7 +59,6 @@ if (!staticServed) {
         console.log(
           `✅ Found public directory at: ${altPath} with ${files.length} files`
         );
-        app.use(express.static(altPath));
         staticServed = true;
         break;
       } else {
@@ -159,23 +157,35 @@ const getOrDownloadDatabase = async (userId, databaseFileName, accessToken) => {
 
   // Download fresh database
   console.log(`Downloading database: ${databaseFileName}`);
-  const databaseBuffer = await storageOperations.downloadDatabase(
-    userId,
-    databaseFileName,
-    accessToken
-  );
+  try {
+    const databaseBuffer = await storageOperations.downloadDatabase(
+      userId,
+      databaseFileName,
+      accessToken
+    );
 
-  // Convert ArrayBuffer to Buffer and save to cache
-  const buffer = Buffer.from(await databaseBuffer.arrayBuffer());
-  fs.writeFileSync(cachedPath, buffer);
-  console.log(`Cached database: ${cachedPath}`);
+    // Convert ArrayBuffer to Buffer and save to cache
+    const buffer = Buffer.from(await databaseBuffer.arrayBuffer());
+    fs.writeFileSync(cachedPath, buffer);
+    console.log(`Cached database: ${cachedPath}`);
 
-  // Also save to original location for MLT.js processing
-  const originalPath = path.join(uploadsDir, databaseFileName);
-  fs.copyFileSync(cachedPath, originalPath);
-  console.log(`Copied fresh database to original location: ${originalPath}`);
+    // Also save to original location for MLT.js processing
+    const originalPath = path.join(uploadsDir, databaseFileName);
+    fs.copyFileSync(cachedPath, originalPath);
+    console.log(`Copied fresh database to original location: ${originalPath}`);
 
-  return originalPath;
+    return originalPath;
+  } catch (error) {
+    console.error("Database download failed:", error);
+
+    // Check if it's a storage error (file not found)
+    if (error.__isStorageError && error.originalError?.status === 400) {
+      throw new Error("DATABASE_NOT_FOUND: Database file not found in storage");
+    }
+
+    // Re-throw other errors
+    throw error;
+  }
 };
 
 // Cleanup old cached databases (run periodically)
@@ -238,7 +248,7 @@ const cleanupExpiredCache = () => {
 };
 
 // Run cache cleanup every hour
-setInterval(cleanupExpiredCache, 60 * 60 * 1000);
+const cacheCleanupInterval = setInterval(cleanupExpiredCache, 60 * 60 * 1000);
 // Also run cleanup on startup
 cleanupExpiredCache();
 
@@ -543,9 +553,8 @@ app.post(
         });
       }
 
-      const fileName = `database-${Date.now()}-${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
+      // Use a consistent filename for the user's database
+      const fileName = `database-v2`;
 
       console.log("About to upload to Supabase storage");
       console.log("File path:", `databases/${req.user.id}/${fileName}`);
@@ -556,7 +565,28 @@ app.post(
 
       console.log("Access token present:", !!accessToken);
 
-      // Upload to Supabase storage
+      // First, delete any existing database files for this user
+      try {
+        const existingDatabases = await storageOperations.listUserDatabases(
+          req.user.id,
+          accessToken
+        );
+
+        if (existingDatabases && existingDatabases.length > 0) {
+          console.log("Deleting existing database files...");
+          for (const file of existingDatabases) {
+            await storageOperations.deleteDatabase(req.user.id, file.name);
+            console.log(`Deleted: ${file.name}`);
+          }
+        }
+      } catch (error) {
+        console.log(
+          "No existing files to delete or error deleting:",
+          error.message
+        );
+      }
+
+      // Upload to Supabase storage (will replace due to upsert: true)
       await storageOperations.uploadDatabase(
         req.user.id,
         req.file.buffer,
@@ -566,8 +596,9 @@ app.post(
 
       console.log("Upload successful!");
 
-      // Also save locally for MLT.js processing
-      const localPath = path.join(uploadsDir, fileName);
+      // Also save locally for MLT.js processing (use user-specific filename)
+      const localFileName = `database-${req.user.id}`;
+      const localPath = path.join(uploadsDir, localFileName);
       fs.writeFileSync(localPath, req.file.buffer);
 
       res.json({
@@ -627,8 +658,14 @@ app.post(
   requireAuth,
   requireActiveSubscription,
   async (req, res) => {
+    let databaseFileName;
     try {
-      const { playlistUrl, threshold = 90, databaseFileName } = req.body;
+      const {
+        playlistUrl,
+        threshold = 90,
+        databaseFileName: dbFileName,
+      } = req.body;
+      databaseFileName = dbFileName; // Make it available in catch block
 
       if (!playlistUrl) {
         return res.status(400).json({
@@ -1016,11 +1053,40 @@ app.get(
       );
 
       // Get or download cached database
-      const localDatabasePath = await getOrDownloadDatabase(
-        req.user.id,
-        databaseFileName,
-        accessToken
-      );
+      let localDatabasePath;
+      try {
+        localDatabasePath = await getOrDownloadDatabase(
+          req.user.id,
+          databaseFileName,
+          accessToken
+        );
+      } catch (dbError) {
+        console.error("Database download error:", dbError);
+
+        // Check if it's a database not found error
+        if (dbError.message && dbError.message.includes("DATABASE_NOT_FOUND")) {
+          return res.status(400).json({
+            error: "Database not found",
+            message:
+              "Please upload a database file first. Go to Settings to upload your Serato database.",
+          });
+        }
+
+        // Check if it's a storage error (file not found)
+        if (dbError.message && dbError.message.includes("400")) {
+          return res.status(400).json({
+            error: "Database not found",
+            message:
+              "Please upload a database file first. Go to Settings to upload your Serato database.",
+          });
+        }
+
+        return res.status(500).json({
+          error: "Database error",
+          message:
+            "Failed to access database. Please try again or contact support.",
+        });
+      }
 
       res.write(
         `data: ${JSON.stringify({
@@ -1409,215 +1475,6 @@ app.get(
   }
 );
 
-// Cleanup uploaded files (optional)
-app.delete("/cleanup/:sessionId", requireAuth, async (req, res) => {
-  try {
-    const sessionId = req.params.sessionId;
-    const uploadPath = path.join(uploadsDir, sessionId);
-
-    if (fs.existsSync(uploadPath)) {
-      fs.unlinkSync(uploadPath);
-    }
-
-    res.json({
-      success: true,
-      message: "Cleanup completed",
-    });
-  } catch (error) {
-    console.error("Cleanup error:", error);
-    res.status(500).json({
-      error: "Cleanup failed",
-      message: "Please try again",
-    });
-  }
-});
-
-// Manual cache cleanup endpoint (for testing)
-app.post("/cleanup-cache", requireAuth, async (req, res) => {
-  try {
-    cleanupExpiredCache();
-    res.json({
-      success: true,
-      message: "Cache cleanup completed",
-    });
-  } catch (error) {
-    console.error("Cache cleanup error:", error);
-    res.status(500).json({
-      error: "Cache cleanup failed",
-      message: "Please try again",
-    });
-  }
-});
-
-// Manual cleanup of temporary database files
-app.post("/cleanup-temp-databases", requireAuth, async (req, res) => {
-  try {
-    let cleanedCount = 0;
-    const files = fs.readdirSync(uploadsDir);
-
-    files.forEach((file) => {
-      if (file.startsWith("database-") && file.includes("-")) {
-        const filePath = path.join(uploadsDir, file);
-        try {
-          fs.unlinkSync(filePath);
-          console.log(`Cleaned up temporary database: ${file}`);
-          cleanedCount++;
-        } catch (error) {
-          console.error(`Failed to clean up ${file}:`, error);
-        }
-      }
-    });
-
-    res.json({
-      success: true,
-      message: `Cleaned up ${cleanedCount} temporary database files`,
-      cleanedCount: cleanedCount,
-    });
-  } catch (error) {
-    console.error("Temp database cleanup error:", error);
-    res.status(500).json({
-      error: "Temp database cleanup failed",
-      message: "Please try again",
-    });
-  }
-});
-
-// Health check endpoint
-app.get("/api/health", (req, res) => {
-  res.json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || "development",
-    publicFiles: {
-      exists: fs.existsSync(path.join(__dirname, "public")),
-      files: fs.existsSync(path.join(__dirname, "public"))
-        ? fs.readdirSync(path.join(__dirname, "public")).length
-        : 0,
-    },
-  });
-});
-
-// Serve the onboarding page
-app.get("/onboarding", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "onboarding.html"));
-});
-
-// Serve pricing page
-app.get("/pricing.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "pricing.html"));
-});
-
-// Serve settings page
-app.get("/settings.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "settings.html"));
-});
-
-// Stripe Webhook
-app.post(
-  "/api/stripe/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    const sig = req.headers["stripe-signature"];
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-    let event;
-
-    try {
-      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-    } catch (err) {
-      console.error("Webhook signature verification failed:", err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    // Handle the event
-    switch (event.type) {
-      case "checkout.session.completed":
-        const session = event.data.object;
-        await handlePaymentSuccess(session);
-        break;
-      case "checkout.session.expired":
-        const expiredSession = event.data.object;
-        await handlePaymentFailure(expiredSession);
-        break;
-      default:
-        console.log(`Unhandled event type ${event.type}`);
-    }
-
-    res.json({ received: true });
-  }
-);
-
-// Handle successful payment
-async function handlePaymentSuccess(session) {
-  try {
-    const { userId, planType } = session.metadata;
-
-    // Update user subscription in database
-    const updateData = {
-      role: "premium",
-      subscription_type: planType,
-      subscription_start: new Date().toISOString(),
-      subscription_end: getSubscriptionEndDate(planType),
-      trial_start: null,
-      trial_end: null,
-      last_seen: new Date().toISOString(),
-    };
-
-    const { data, error } = await machineOperations.updateMachine(
-      userId,
-      updateData
-    );
-
-    if (error) {
-      console.error("Error updating user subscription:", error);
-    } else {
-      console.log("User subscription updated successfully:", data);
-    }
-  } catch (error) {
-    console.error("Error handling payment success:", error);
-  }
-}
-
-// Handle payment failure
-async function handlePaymentFailure(session) {
-  console.log("Payment failed or expired:", session.id);
-  // You can add additional logic here like sending emails, etc.
-}
-
-// Get subscription end date based on plan type
-function getSubscriptionEndDate(planType) {
-  const now = new Date();
-
-  switch (planType) {
-    case "monthly":
-      return new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        now.getDate()
-      ).toISOString();
-    case "yearly":
-      return new Date(
-        now.getFullYear() + 1,
-        now.getMonth(),
-        now.getDate()
-      ).toISOString();
-    case "lifetime":
-      // Lifetime plans don't expire - set to 50 years from now
-      return new Date(
-        now.getFullYear() + 50,
-        now.getMonth(),
-        now.getDate()
-      ).toISOString();
-    default:
-      return new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        now.getDate()
-      ).toISOString();
-  }
-}
-
 // Serve the main application
 app.get("/", (req, res) => {
   const indexPath = path.join(__dirname, "public", "index.html");
@@ -1642,91 +1499,87 @@ app.get("/", (req, res) => {
     }
 
     console.log(`❌ index.html not found in any location`);
-
-    // Fallback: Serve a basic HTML page
-    console.log(`🔄 Serving fallback HTML page`);
-    res.send(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>CrateMatch Web</title>
-          <style>
-              body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-              .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-              h1 { color: #333; text-align: center; }
-              .status { background: #e8f5e8; border: 1px solid #4caf50; padding: 15px; border-radius: 5px; margin: 20px 0; }
-              .warning { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0; }
-              .error { background: #f8d7da; border: 1px solid #dc3545; padding: 15px; border-radius: 5px; margin: 20px 0; }
-              .btn { background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 5px; }
-              .btn:hover { background: #0056b3; }
-          </style>
-      </head>
-      <body>
-          <div class="container">
-              <h1>🎵 CrateMatch Web</h1>
-              
-              <div class="status">
-                  <h3>✅ Server Status: Running</h3>
-                  <p>The CrateMatch Web server is running successfully on port ${PORT}.</p>
-              </div>
-              
-              <div class="warning">
-                  <h3>⚠️ Static Files Issue</h3>
-                  <p>The public files (HTML, CSS, JS) are not properly deployed. This is a deployment configuration issue.</p>
-                  <p><strong>Expected locations:</strong></p>
-                  <ul>
-                      <li>${path.join(__dirname, "public", "index.html")}</li>
-                      <li>${path.join(
-                        process.cwd(),
-                        "public",
-                        "index.html"
-                      )}</li>
-                      <li>/workspace/public/index.html</li>
-                      <li>/app/public/index.html</li>
-                  </ul>
-              </div>
-              
-              <div class="error">
-                  <h3>🔧 Next Steps</h3>
-                  <p>To fix this issue:</p>
-                  <ol>
-                      <li>Check the deployment logs for the build process</li>
-                      <li>Ensure the public directory is included in the deployment</li>
-                      <li>Verify the build script is copying files correctly</li>
-                      <li>Redeploy the application</li>
-                  </ol>
-              </div>
-              
-              <div style="text-align: center; margin-top: 30px;">
-                  <a href="/api/health" class="btn">Check API Health</a>
-                  <a href="/onboarding" class="btn">Try Onboarding</a>
-              </div>
-          </div>
-      </body>
-      </html>
-    `);
+    res.status(404).send("App page not found");
   }
 });
+
+// Serve other pages
+app.get("/auth", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "auth.html"));
+});
+
+app.get("/app", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "app.html"));
+});
+
+app.get("/onboarding", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "onboarding.html"));
+});
+
+app.get("/pricing.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "pricing.html"));
+});
+
+app.get("/settings.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "settings.html"));
+});
+
+// Add route for /settings (without .html extension)
+app.get("/settings", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "settings.html"));
+});
+
+// Add static file serving
+if (staticServed) {
+  app.use(express.static(publicPath));
+  console.log(`✅ Static files now being served from: ${publicPath}`);
+}
 
 const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
 // Graceful shutdown handling
-process.on("SIGTERM", () => {
-  console.log("SIGTERM received, shutting down gracefully...");
+let isShuttingDown = false;
+
+const gracefulShutdown = (signal) => {
+  if (isShuttingDown) {
+    console.log(`${signal} received again, forcing exit...`);
+    process.exit(1);
+  }
+
+  isShuttingDown = true;
+  console.log(`${signal} received, shutting down gracefully...`);
+
+  // Clear any intervals
+  if (cacheCleanupInterval) {
+    clearInterval(cacheCleanupInterval);
+    console.log("Cache cleanup interval cleared");
+  }
+
+  // Close server with timeout
   server.close(() => {
     console.log("Server closed");
     process.exit(0);
   });
+
+  // Force exit after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.log("Forcing shutdown after timeout...");
+    process.exit(1);
+  }, 10000);
+};
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  gracefulShutdown("UNCAUGHT_EXCEPTION");
 });
 
-process.on("SIGINT", () => {
-  console.log("SIGINT received, shutting down gracefully...");
-  server.close(() => {
-    console.log("Server closed");
-    process.exit(0);
-  });
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  gracefulShutdown("UNHANDLED_REJECTION");
 });

@@ -37,7 +37,7 @@ async function checkAuthStatus() {
         authToken = token;
 
         // Redirect to main app
-        window.location.href = "/";
+        window.location.href = "/app";
         return;
       } else {
         // Token is invalid, clear it
@@ -48,7 +48,7 @@ async function checkAuthStatus() {
       localStorage.removeItem("authToken");
     }
   }
-  
+
   // Hide loading overlay after auth check
   hideAuthLoadingOverlay();
 }
@@ -150,7 +150,7 @@ loginForm.addEventListener("submit", async (e) => {
       authToken = data.session.access_token;
 
       // Redirect to main app
-      window.location.href = "/";
+      window.location.href = "/app";
     } else {
       showError(loginError, data.message || "Sign in failed");
     }
@@ -206,9 +206,9 @@ signupForm.addEventListener("submit", async (e) => {
       // Store the session token if available
       if (data.session && data.session.access_token) {
         localStorage.setItem("authToken", data.session.access_token);
-        
+
         showSuccess(signupSuccess, data.message);
-        
+
         // Redirect to onboarding after a short delay
         setTimeout(() => {
           window.location.href = "/onboarding";
@@ -295,11 +295,26 @@ backToLoginBtn.addEventListener("click", () => {
 document.addEventListener("DOMContentLoaded", () => {
   // Add a timeout to prevent infinite loading
   setTimeout(() => {
-    if (authLoadingOverlay && !authLoadingOverlay.classList.contains("hidden")) {
+    if (
+      authLoadingOverlay &&
+      !authLoadingOverlay.classList.contains("hidden")
+    ) {
       console.warn("Auth check taking too long, hiding loading overlay");
       hideAuthLoadingOverlay();
     }
   }, 10000); // 10 second timeout
-  
-  checkAuthStatus();
+
+  // Check URL parameters for mode
+  const urlParams = new URLSearchParams(window.location.search);
+  const mode = urlParams.get("mode");
+
+  checkAuthStatus().then(() => {
+    // After auth check, show appropriate form based on mode
+    if (mode === "signup") {
+      showForm(signupForm);
+    } else if (mode === "signin") {
+      showForm(loginForm);
+    }
+    // If no mode specified, default to login form
+  });
 });

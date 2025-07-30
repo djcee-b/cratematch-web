@@ -285,7 +285,10 @@ function setupFileUpload() {
 // Handle file upload
 async function handleFileUpload(file) {
   if (!isValidDatabaseFile(file)) {
-    showUploadStatus("Please select a valid database file.", "error");
+    showUploadStatus(
+      "Please select a file named 'database V2'. Only files with this exact name are accepted.",
+      "error"
+    );
     return;
   }
 
@@ -337,8 +340,8 @@ async function handleFileUpload(file) {
 
 // Validate database file
 function isValidDatabaseFile(file) {
-  // Add your validation logic here
-  return file && file.size > 0;
+  // Only accept files named "database V2"
+  return file && file.size > 0 && file.name === "database V2";
 }
 
 // Show upload status
