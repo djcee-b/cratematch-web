@@ -50,12 +50,13 @@ Go to your GitHub repository: `Settings` → `Secrets and variables` → `Action
 
 Add these secrets:
 
-| Secret Name       | Value                   | Description                   |
-| ----------------- | ----------------------- | ----------------------------- |
-| `DROPLET_HOST`    | `YOUR_DROPLET_IP`       | Your droplet's IP address     |
-| `DROPLET_USER`    | `root` or your username | SSH username for your droplet |
-| `DROPLET_PORT`    | `22`                    | SSH port (usually 22)         |
-| `DROPLET_SSH_KEY` | Private key content     | The private SSH key content   |
+| Secret Name       | Value                   | Description                        |
+| ----------------- | ----------------------- | ---------------------------------- |
+| `DROPLET_HOST`    | `YOUR_DROPLET_IP`       | Your droplet's IP address          |
+| `DROPLET_USER`    | `root` or your username | SSH username for your droplet      |
+| `DROPLET_PORT`    | `22`                    | SSH port (usually 22)              |
+| `DROPLET_SSH_KEY` | Private key content     | The private SSH key content        |
+| `NPM_TOKEN`       | Your npm auth token     | For accessing private npm packages |
 
 ### Step 4: Test the Deployment
 

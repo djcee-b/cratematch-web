@@ -111,6 +111,7 @@ echo "DROPLET_HOST: $DROPLET_IP"
 echo "DROPLET_USER: $DROPLET_USER"
 echo "DROPLET_PORT: $DROPLET_PORT"
 echo "DROPLET_SSH_KEY: [The private key content above]"
+echo "NPM_TOKEN: [Your npm authentication token for private packages]"
 echo ""
 
 print_step "Step 5: Verify Droplet Setup"
