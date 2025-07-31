@@ -23,9 +23,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: ac'ions'setup-node@v4
-        with':
-          node-version: '18"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
 
@@ -61,11 +61,11 @@ jobs:
             # Pull latest changes
             git pull origin main
 
-                         # Configure NPM for private packages
-             echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
-             
-             # Install dependencies
-             npm ci --production
+            # Configure NPM for private packages
+            echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+            
+            # Install dependencies
+            npm ci --production
 
             # Copy public files
             npm run postinstall
