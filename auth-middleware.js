@@ -632,11 +632,86 @@ setInterval(() => {
   }
 }, 60000); // Clean up every minute
 
+// Circuit breaker to prevent cascading failures
+const circuitBreaker = {
+  failures: 0,
+  lastFailureTime: 0,
+  state: 'CLOSED', // CLOSED, OPEN, HALF_OPEN
+  threshold: 5, // Number of failures before opening
+  timeout: 30000, // 30 seconds timeout before trying again
+  
+  async execute(fn) {
+    if (this.state === 'OPEN') {
+      if (Date.now() - this.lastFailureTime > this.timeout) {
+        this.state = 'HALF_OPEN';
+      } else {
+        throw new Error('Circuit breaker is OPEN');
+      }
+    }
+    
+    try {
+      const result = await fn();
+      if (this.state === 'HALF_OPEN') {
+        this.state = 'CLOSED';
+        this.failures = 0;
+      }
+      return result;
+    } catch (error) {
+      this.failures++;
+      this.lastFailureTime = Date.now();
+      
+      if (this.failures >= this.threshold) {
+        this.state = 'OPEN';
+      }
+      
+      throw error;
+    }
+  },
+  
+  reset() {
+    this.failures = 0;
+    this.state = 'CLOSED';
+    this.lastFailureTime = 0;
+  }
+};
+
 // Enhanced requireAuth with rate limiting
 const requireAuthWithRateLimit = [rateLimit, requireAuth];
 
 // Enhanced optionalAuth with rate limiting
 const optionalAuthWithRateLimit = [rateLimit, optionalAuth];
+
+// Enhanced requireAuth with circuit breaker
+const requireAuthWithCircuitBreaker = async (req, res, next) => {
+  try {
+    await circuitBreaker.execute(async () => {
+      await requireAuth(req, res, next);
+    });
+  } catch (error) {
+    if (error.message === 'Circuit breaker is OPEN') {
+      return res.status(503).json({
+        error: "Service temporarily unavailable",
+        message: "Please try again in a moment",
+      });
+    }
+    throw error;
+  }
+};
+
+// Enhanced optionalAuth with circuit breaker
+const optionalAuthWithCircuitBreaker = async (req, res, next) => {
+  try {
+    await circuitBreaker.execute(async () => {
+      await optionalAuth(req, res, next);
+    });
+  } catch (error) {
+    if (error.message === 'Circuit breaker is OPEN') {
+      // For optional auth, continue without user
+      return next();
+    }
+    throw error;
+  }
+};
 
 // Cache management functions
 const clearSessionCache = () => {
@@ -677,6 +752,8 @@ module.exports = {
   optionalAuth,
   requireAuthWithRateLimit,
   optionalAuthWithRateLimit,
+  requireAuthWithCircuitBreaker,
+  optionalAuthWithCircuitBreaker,
   rateLimit,
   requireActiveSubscription,
   clearSessionCache,
