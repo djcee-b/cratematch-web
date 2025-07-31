@@ -35,6 +35,8 @@ cd /var/www/cratematch
 bash scripts/deploy-droplet.sh
 ```
 
+**Note:** The deployment will automatically upgrade Node.js to version 20 if needed, as some dependencies require it.
+
 ### Step 2: Generate SSH Keys for GitHub Actions
 
 The setup script will automatically:
