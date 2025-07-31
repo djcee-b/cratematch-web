@@ -121,6 +121,61 @@ const requireActiveSubscription = async (req, res, next) => {
 
     // Check if user has active subscription
     if (machine.role === "premium") {
+      // Check if premium subscription has expired
+      if (machine.subscription_end) {
+        const subscriptionEnd = new Date(machine.subscription_end);
+        const now = new Date();
+
+        if (now >= subscriptionEnd) {
+          console.log(
+            "🔄 Premium subscription expired for user:",
+            req.user.email,
+            "- auto-downgrading to free"
+          );
+
+          // Automatically downgrade to free user
+          const { error: updateError } = await machineOperations.updateMachine(
+            machine.id,
+            {
+              role: "free",
+              subscription_type: null,
+              subscription_start: null,
+              subscription_end: null,
+            }
+          );
+
+          if (updateError) {
+            console.error(
+              "❌ Error auto-downgrading premium user:",
+              updateError
+            );
+            // If downgrade fails, still allow access but log the error
+            req.machine = {
+              ...machine,
+              role: "free",
+              subscription_type: null,
+            };
+            return next();
+          }
+
+          // Update the machine object with new role
+          req.machine = {
+            ...machine,
+            role: "free",
+            subscription_type: null,
+          };
+          console.log(
+            "✅ Premium user auto-downgraded to free:",
+            req.user.email
+          );
+
+          // Set a flag in the response to indicate auto-downgrade
+          res.setHeader("X-Auto-Downgraded", "true");
+          return next();
+        }
+      }
+
+      // Subscription is still active
       req.machine = machine;
       return next();
     }

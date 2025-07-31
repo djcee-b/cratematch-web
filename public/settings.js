@@ -264,7 +264,7 @@ function updateSubscriptionDisplay() {
           console.error("Settings page - FREE section element not found!");
         }
         if (freePlanActionBtn) {
-          freePlanActionBtn.textContent = "Upgrade to Pro";
+          freePlanActionBtn.textContent = "Upgrade to Premium";
           freePlanActionBtn.onclick = () => {
             window.location.href = "/pricing.html";
           };

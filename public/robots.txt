@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://cratematch.app/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Disallow admin or private areas (if any)
+Disallow: /api/
+Disallow: /admin/
+Disallow: /private/
+
+# Allow important pages
+Allow: /pricing.html
+Allow: /auth.html
+Allow: /app.html
+Allow: /history.html
+Allow: /settings.html 

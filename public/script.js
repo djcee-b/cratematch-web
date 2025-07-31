@@ -836,13 +836,41 @@ async function processPlaylist() {
         } else if (data.type === "error") {
           console.error("Processing error:", data);
           eventSource.close();
-          showError(data.message || "Processing failed", data.showUpgrade);
-          // Hide processing overlay
-          if (processingOverlay) {
-            processingOverlay.style.display = "none";
-          }
-          if (processBtn) {
-            processBtn.style.display = "block";
+
+          // Check if this is the 50+ tracks error for free users
+          if (
+            data.message &&
+            data.message.includes("more than 50 tracks") &&
+            data.message.includes("Free users are limited")
+          ) {
+            console.log(
+              "🔄 50+ tracks error detected, showing enhanced error..."
+            );
+
+            // Hide processing overlay immediately
+            if (processingOverlay) {
+              processingOverlay.style.display = "none";
+            }
+
+            // Show enhanced error with countdown and better styling
+            showEnhancedError(
+              data.message || "Processing failed",
+              data.showUpgrade,
+              () => {
+                console.log("🔄 Resetting page after user acknowledgment...");
+                window.location.reload();
+              }
+            );
+          } else {
+            // Handle other errors normally
+            showError(data.message || "Processing failed", data.showUpgrade);
+            // Hide processing overlay
+            if (processingOverlay) {
+              processingOverlay.style.display = "none";
+            }
+            if (processBtn) {
+              processBtn.style.display = "block";
+            }
           }
         }
       } catch (error) {
@@ -1649,6 +1677,119 @@ function showError(message, showUpgrade = false) {
 
   if (errorModal) {
     errorModal.style.display = "flex";
+  }
+}
+
+// Enhanced error handling for 50+ tracks error with countdown and better UX
+function showEnhancedError(message, showUpgrade = false, onComplete = null) {
+  // Create enhanced error modal if it doesn't exist
+  let enhancedErrorModal = document.getElementById("enhanced-error-modal");
+
+  if (!enhancedErrorModal) {
+    enhancedErrorModal = document.createElement("div");
+    enhancedErrorModal.id = "enhanced-error-modal";
+    enhancedErrorModal.className = "enhanced-error-modal";
+    enhancedErrorModal.innerHTML = `
+      <div class="enhanced-error-content">
+        <div class="enhanced-error-header">
+          <div class="enhanced-error-icon">⚠️</div>
+          <h3>Playlist Too Large</h3>
+          <button class="enhanced-error-close" onclick="closeEnhancedError()">×</button>
+        </div>
+        <div class="enhanced-error-body">
+          <p class="enhanced-error-message"></p>
+          <div class="enhanced-error-countdown">
+            <div class="countdown-text">Page will reset in <span class="countdown-number">5</span> seconds</div>
+            <div class="countdown-progress">
+              <div class="countdown-progress-fill"></div>
+            </div>
+          </div>
+          <div class="enhanced-error-actions">
+            <button class="enhanced-error-reset-now" onclick="resetPageNow()">Reset Now</button>
+            <button class="enhanced-error-upgrade" onclick="window.location.href='/pricing.html'" style="display: none;">
+              Upgrade to Premium
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(enhancedErrorModal);
+  }
+
+  // Update message
+  const messageElement = enhancedErrorModal.querySelector(
+    ".enhanced-error-message"
+  );
+  if (messageElement) {
+    messageElement.textContent = message;
+  }
+
+  // Show/hide upgrade button
+  const upgradeBtn = enhancedErrorModal.querySelector(
+    ".enhanced-error-upgrade"
+  );
+  if (upgradeBtn) {
+    upgradeBtn.style.display = showUpgrade ? "inline-block" : "none";
+  }
+
+  // Show modal
+  enhancedErrorModal.style.display = "flex";
+  document.body.style.overflow = "hidden";
+
+  // Start countdown
+  let countdown = 5;
+  const countdownNumber = enhancedErrorModal.querySelector(".countdown-number");
+  const countdownProgressFill = enhancedErrorModal.querySelector(
+    ".countdown-progress-fill"
+  );
+
+  const countdownInterval = setInterval(() => {
+    countdown--;
+    if (countdownNumber) {
+      countdownNumber.textContent = countdown;
+    }
+    if (countdownProgressFill) {
+      const progress = ((5 - countdown) / 5) * 100;
+      countdownProgressFill.style.width = `${progress}%`;
+    }
+
+    if (countdown <= 0) {
+      clearInterval(countdownInterval);
+      if (onComplete) {
+        onComplete();
+      }
+    }
+  }, 1000);
+
+  // Store the interval and callback for manual reset
+  window.enhancedErrorCountdown = {
+    interval: countdownInterval,
+    onComplete: onComplete,
+  };
+}
+
+// Close enhanced error modal
+function closeEnhancedError() {
+  const modal = document.getElementById("enhanced-error-modal");
+  if (modal) {
+    modal.style.display = "none";
+    document.body.style.overflow = "auto";
+  }
+
+  // Clear countdown
+  if (window.enhancedErrorCountdown) {
+    clearInterval(window.enhancedErrorCountdown.interval);
+    window.enhancedErrorCountdown = null;
+  }
+}
+
+// Reset page immediately
+function resetPageNow() {
+  if (window.enhancedErrorCountdown) {
+    clearInterval(window.enhancedErrorCountdown.interval);
+    if (window.enhancedErrorCountdown.onComplete) {
+      window.enhancedErrorCountdown.onComplete();
+    }
   }
 }
 

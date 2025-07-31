@@ -3856,13 +3856,6 @@ body {
   color: #f8fafc;
 }
 
-.feature-included::before {
-  content: "✔";
-  color: #22c55e;
-  font-size: 1.2em;
-  margin-right: 8px;
-}
-
 .feature-excluded {
   margin-bottom: 8px;
   display: flex;
@@ -4129,4 +4122,215 @@ body {
 .header-upgrade-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Enhanced Error Modal Styles */
+.enhanced-error-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+.enhanced-error-content {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-radius: 16px;
+  padding: 0;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  animation: enhancedModalSlideIn 0.3s ease-out;
+}
+
+@keyframes enhancedModalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.enhanced-error-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.enhanced-error-icon {
+  font-size: 24px;
+  margin-right: 12px;
+  animation: enhancedPulse 2s infinite;
+}
+
+@keyframes enhancedPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.enhanced-error-header h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0;
+  flex: 1;
+}
+
+.enhanced-error-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.enhanced-error-close:hover {
+  color: #f8fafc;
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.enhanced-error-body {
+  padding: 24px;
+}
+
+.enhanced-error-message {
+  font-size: 1rem;
+  color: #e2e8f0;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.enhanced-error-countdown {
+  margin-bottom: 24px;
+}
+
+.countdown-text {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.countdown-number {
+  font-weight: 600;
+  color: #3b82f6;
+  font-size: 1.1rem;
+}
+
+.countdown-progress {
+  width: 100%;
+  height: 6px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.countdown-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #22c55e);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 1s linear;
+}
+
+.enhanced-error-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.enhanced-error-reset-now {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.enhanced-error-reset-now:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.enhanced-error-upgrade {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.enhanced-error-upgrade:hover {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+@media (max-width: 768px) {
+  .enhanced-error-content {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .enhanced-error-header {
+    padding: 20px 20px 16px 20px;
+  }
+  
+  .enhanced-error-body {
+    padding: 20px;
+  }
+  
+  .enhanced-error-actions {
+    flex-direction: column;
+  }
+  
+  .enhanced-error-reset-now,
+  .enhanced-error-upgrade {
+    width: 100%;
+  }
+}
+
+/* Logo link styles - remove underline */
+.logo {
+  text-decoration: none;
+  color: inherit;
+}
+
+.logo:hover {
+  text-decoration: none;
+  color: inherit;
 }

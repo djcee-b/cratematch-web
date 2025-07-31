@@ -3,7 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CrateMatch - Spotify to Serato</title>
+  
+  <!-- Primary Meta Tags -->
+  <title>CrateMatch App - Convert Spotify Playlists to Serato Crates</title>
+  <meta name="title" content="CrateMatch App - Convert Spotify Playlists to Serato Crates">
+  <meta name="description" content="Convert your Spotify playlists to Serato crates by matching tracks from your existing music library. AI-powered track matching for DJs.">
+  <meta name="keywords" content="spotify to serato, playlist conversion, DJ workflow, track matching, serato crate, music automation">
+  <meta name="author" content="MLT">
+  <meta name="robots" content="noindex, nofollow">
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://cratematch.app/app.html">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="Logo.png">
+  
+  <!-- Preconnect for Performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -23,13 +38,13 @@
     <div class="container">
       <div class="header-content">
         <div class="header-left">
-          <div class="logo">
+          <a href="/" class="logo">
             <h1>CrateMatch <span class="beta-label">beta</span></h1>
-          </div>
+          </a>
         </div>
         <div class="header-nav" id="header-nav" style="display: none;">
           <span class="subscription-badge" id="header-subscription-badge" style="display: none;"></span>
-          <button class="header-upgrade-btn" id="header-upgrade-btn" style="display: none;">Upgrade to Pro</button>
+          <button class="header-upgrade-btn" id="header-upgrade-btn" style="display: none;">Upgrade to Premium</button>
           <a href="/history.html" class="nav-btn">History</a>
           <button class="nav-btn" onclick="window.location.href='/settings'">Settings</button>
           <button class="nav-btn sign-out-btn" id="sign-out-btn">Sign Out</button>
@@ -46,7 +61,7 @@
           <span class="trial-banner-label">Free Trial</span>
           <span class="trial-countdown" id="trial-countdown"></span>
         </div>
-        <button class="upgrade-btn-banner" id="upgrade-btn-banner">Upgrade to Pro</button>
+        <button class="upgrade-btn-banner" id="upgrade-btn-banner">Upgrade to Premium</button>
       </div>
     </div>
   </div>
@@ -143,7 +158,7 @@
       <p class="error-message" id="error-message">An error occurred while processing your playlist.</p>
       <div class="error-actions" id="error-actions">
         <button class="error-close" id="error-close">Close</button>
-        <button class="error-upgrade-btn" id="error-upgrade-btn" style="display: none;">Upgrade to Pro</button>
+                    <button class="error-upgrade-btn" id="error-upgrade-btn" style="display: none;">Upgrade to Premium</button>
       </div>
     </div>
   </div>
@@ -159,7 +174,7 @@
         <button class="trial-option-btn trial-upgrade-btn" id="trial-upgrade-btn">
           <div class="trial-option-icon">⭐</div>
           <div class="trial-option-content">
-            <h4>Upgrade to Pro</h4>
+            <h4>Upgrade to Premium</h4>
             <p>Unlimited playlist processing and all features</p>
           </div>
         </button>

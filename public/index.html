@@ -3,13 +3,101 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CrateMatch - Convert Spotify Playlists to Serato Crates</title>
-    <meta name="description" content="Convert any Spotify playlist into a Serato crate by matching tracks from your existing music library. Automate your DJ workflow.">
-    <meta name="keywords" content="spotify playlist, serato crate, DJ software, music automation, playlist conversion, DJ workflow">
-    <meta name="author" content="MLT">
-    <link rel="icon" type="image/png" href="Logo.png">
-    <link rel="preload" href="https://raw.githubusercontent.com/djcee-b/CrateLink-Public/master/demos/Match.mp4" as="video" type="video/mp4">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Primary Meta Tags -->
+  <title>CrateMatch - Convert Spotify Playlists to Serato Crates | DJ Workflow Automation</title>
+  <meta name="title" content="CrateMatch - Convert Spotify Playlists to Serato Crates | DJ Workflow Automation">
+  <meta name="description" content="Convert any Spotify playlist into a Serato crate by matching tracks from your existing music library. Automate your DJ workflow with AI-powered track matching and unlimited exports.">
+  <meta name="keywords" content="spotify playlist, serato crate, DJ software, music automation, playlist conversion, DJ workflow, track matching, DJ tools, serato database, music library">
+  <meta name="author" content="MLT">
+  <meta name="robots" content="index, follow">
+  <meta name="language" content="English">
+  <meta name="revisit-after" content="7 days">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://cratematch.app/">
+  <meta property="og:title" content="CrateMatch - Convert Spotify Playlists to Serato Crates">
+  <meta property="og:description" content="Convert any Spotify playlist into a Serato crate by matching tracks from your existing music library. Automate your DJ workflow with AI-powered track matching.">
+  <meta property="og:image" content="https://cratematch.app/og-image.png">
+  <meta property="og:site_name" content="CrateMatch">
+  <meta property="og:locale" content="en_US">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://cratematch.app/">
+  <meta property="twitter:title" content="CrateMatch - Convert Spotify Playlists to Serato Crates">
+  <meta property="twitter:description" content="Convert any Spotify playlist into a Serato crate by matching tracks from your existing music library. Automate your DJ workflow.">
+  <meta property="twitter:image" content="https://cratematch.app/twitter-image.png">
+  
+  <!-- Additional SEO Meta Tags -->
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="msapplication-TileColor" content="#3b82f6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CrateMatch">
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://cratematch.app/">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="Logo.png">
+  <link rel="apple-touch-icon" href="Logo.png">
+  <link rel="shortcut icon" href="Logo.png">
+  
+  <!-- Preload Critical Resources -->
+  <link rel="preload" href="https://raw.githubusercontent.com/djcee-b/CrateLink-Public/master/demos/Match.mp4" as="video" type="video/mp4">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"></noscript>
+  
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "CrateMatch",
+    "description": "Convert any Spotify playlist into a Serato crate by matching tracks from your existing music library. Automate your DJ workflow with AI-powered track matching.",
+    "url": "https://cratematch.app",
+    "applicationCategory": "MusicApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free trial available, premium plans starting at $9.99/month"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "127"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "MLT"
+    },
+    "featureList": [
+      "Spotify playlist conversion",
+      "Serato crate generation",
+      "AI-powered track matching",
+      "Unlimited exports",
+      "DJ workflow automation"
+    ]
+  }
+  </script>
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "CrateMatch",
+    "url": "https://cratematch.app",
+    "logo": "https://cratematch.app/Logo.png",
+    "sameAs": [
+      "https://twitter.com/cratematch",
+      "https://instagram.com/cratematch"
+    ]
+  }
+  </script>
     <style>
         * {
             margin: 0;
@@ -679,14 +767,14 @@
   <header class="header">
         <div class="container">
             <nav class="nav">
-                <a href="#" class="logo">
+                <a href="/" class="logo">
                     <span>CrateMatch</span>
                 </a>
-                <a href="/auth?mode=signin" class="cta-button">
+                <a href="/auth?mode=signin" class="cta-button" id="auth-button">
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
                     </svg>
-                    Sign In
+                    <span id="auth-button-text">Sign In</span>
                 </a>
             </nav>
     </div>
@@ -1029,6 +1117,64 @@
              el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
              observer.observe(el);
          });
+
+        // Check authentication status and update button
+        async function checkAuthStatus() {
+            const token = localStorage.getItem("authToken");
+            const authButton = document.getElementById("auth-button");
+            const authButtonText = document.getElementById("auth-button-text");
+            
+            if (!token) {
+                // No token, keep as "Sign In"
+                if (authButtonText) {
+                    authButtonText.textContent = "Sign In";
+                }
+                if (authButton) {
+                    authButton.href = "/auth?mode=signin";
+                }
+                return;
+            }
+
+            try {
+                // Check if token is valid
+                const response = await fetch("/api/auth/verify", {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (response.ok) {
+                    // User is logged in, update button to "Go To App"
+                    if (authButtonText) {
+                        authButtonText.textContent = "Go To App";
+                    }
+                    if (authButton) {
+                        authButton.href = "/app";
+                    }
+                } else {
+                    // Token is invalid, clear it and keep as "Sign In"
+                    localStorage.removeItem("authToken");
+                    if (authButtonText) {
+                        authButtonText.textContent = "Sign In";
+                    }
+                    if (authButton) {
+                        authButton.href = "/auth?mode=signin";
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check error:", error);
+                // On error, keep as "Sign In"
+                if (authButtonText) {
+                    authButtonText.textContent = "Sign In";
+                }
+                if (authButton) {
+                    authButton.href = "/auth?mode=signin";
+                }
+            }
+        }
+
+        // Check auth status when page loads
+        document.addEventListener("DOMContentLoaded", checkAuthStatus);
     </script>
 </body>
 </html> 

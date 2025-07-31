@@ -974,8 +974,65 @@ const requireActiveSubscriptionForProgress = async (req, res, next) => {
       }
     }
 
-    // Allow free and premium users
-    if (machine.role === "free" || machine.role === "premium") {
+    // Check premium subscription expiration
+    if (machine.role === "premium") {
+      if (machine.subscription_end) {
+        const subscriptionEnd = new Date(machine.subscription_end);
+        const now = new Date();
+
+        if (now >= subscriptionEnd) {
+          console.log(
+            "🔄 Premium subscription expired for user:",
+            req.user.email,
+            "- auto-downgrading to free"
+          );
+
+          // Automatically downgrade to free user
+          const { error: updateError } = await machineOperations.updateMachine(
+            machine.id,
+            {
+              role: "free",
+              subscription_type: null,
+              subscription_start: null,
+              subscription_end: null,
+            }
+          );
+
+          if (updateError) {
+            console.error(
+              "❌ Error auto-downgrading premium user:",
+              updateError
+            );
+            // If downgrade fails, still allow access but log the error
+            req.machine = {
+              ...machine,
+              role: "free",
+              subscription_type: null,
+            };
+            return next();
+          }
+
+          // Update the machine object with new role
+          req.machine = {
+            ...machine,
+            role: "free",
+            subscription_type: null,
+          };
+          console.log(
+            "✅ Premium user auto-downgraded to free:",
+            req.user.email
+          );
+          return next();
+        }
+      }
+
+      // Subscription is still active
+      req.machine = machine;
+      return next();
+    }
+
+    // Allow free users
+    if (machine.role === "free") {
       req.machine = machine;
       return next();
     }
@@ -1000,6 +1057,82 @@ const requireActiveSubscriptionForProgress = async (req, res, next) => {
 
 // Store active processing sessions
 const activeSessions = new Map();
+
+// Function to check and handle expired premium subscriptions
+async function checkExpiredPremiumSubscriptions() {
+  try {
+    console.log("🔍 Checking for expired premium subscriptions...");
+
+    const { machineOperations } = require("./supabase-client");
+    const { data: machines, error } = await machineOperations.getAllMachines();
+
+    if (error) {
+      console.error(
+        "❌ Error fetching machines for subscription check:",
+        error
+      );
+      return;
+    }
+
+    if (!machines || machines.length === 0) {
+      console.log("📝 No machines found for subscription check");
+      return;
+    }
+
+    const now = new Date();
+    let expiredCount = 0;
+
+    for (const machine of machines) {
+      if (machine.role === "premium" && machine.subscription_end) {
+        const subscriptionEnd = new Date(machine.subscription_end);
+
+        if (now >= subscriptionEnd) {
+          console.log(
+            "🔄 Auto-downgrading expired premium subscription for user:",
+            machine.email
+          );
+
+          const { error: updateError } = await machineOperations.updateMachine(
+            machine.id,
+            {
+              role: "free",
+              subscription_type: null,
+              subscription_start: null,
+              subscription_end: null,
+            }
+          );
+
+          if (updateError) {
+            console.error(
+              "❌ Error auto-downgrading user:",
+              machine.email,
+              updateError
+            );
+          } else {
+            console.log("✅ Successfully auto-downgraded user:", machine.email);
+            expiredCount++;
+          }
+        }
+      }
+    }
+
+    if (expiredCount > 0) {
+      console.log(
+        `✅ Auto-downgraded ${expiredCount} expired premium subscriptions`
+      );
+    } else {
+      console.log("📝 No expired premium subscriptions found");
+    }
+  } catch (error) {
+    console.error("❌ Error in subscription expiration check:", error);
+  }
+}
+
+// Run subscription expiration check every hour
+setInterval(checkExpiredPremiumSubscriptions, 60 * 60 * 1000); // 1 hour
+
+// Also run it once on server startup
+setTimeout(checkExpiredPremiumSubscriptions, 5000); // Run 5 seconds after startup
 
 // Process playlist with progress updates (Server-Sent Events)
 app.get(
@@ -2071,6 +2204,27 @@ app.post("/api/downgrade-to-free", requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error in downgrade to free endpoint:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      message: "Please try again",
+    });
+  }
+});
+
+// Manual subscription expiration check (for testing/admin purposes)
+app.post("/api/check-expired-subscriptions", requireAuth, async (req, res) => {
+  try {
+    console.log(
+      "🔍 Manual subscription expiration check triggered by:",
+      req.user.email
+    );
+    await checkExpiredPremiumSubscriptions();
+    res.json({
+      success: true,
+      message: "Subscription expiration check completed",
+    });
+  } catch (error) {
+    console.error("❌ Error in manual subscription check:", error);
     res.status(500).json({
       error: "Internal server error",
       message: "Please try again",

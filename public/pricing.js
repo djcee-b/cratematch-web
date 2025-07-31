@@ -192,7 +192,7 @@ function initializeEventListeners() {
   }
   if (successContinueBtn) {
     successContinueBtn.addEventListener("click", () => {
-      window.location.href = "/";
+      window.location.href = "/app";
     });
   }
 
