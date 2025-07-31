@@ -63,7 +63,7 @@ jobs:
 
             # Configure NPM for private packages
             echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
-            
+
             # Install dependencies
             npm ci --production
 
