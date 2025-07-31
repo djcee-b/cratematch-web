@@ -1,42 +1,102 @@
-name: Deploy CrateMatch Web
+name: Deploy to Digital Ocean Droplet
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: "npm"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Configure NPM for private packages
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run deployment setup script
+      - name: Run tests (if any)
         run: |
-          chmod +x scripts/deploy-setup.sh
-          NPM_TOKEN=${{ secrets.NPM_TOKEN }} ./scripts/deploy-setup.sh
+          # Add your test commands here if you have tests
+          echo "Running tests..."
+          # npm test
 
-      - name: Test application
+      - name: Build application
+        run: npm run build
+
+      - name: Deploy to Digital Ocean Droplet
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_PORT || 22 }}
+          script: |
+            # Navigate to app directory
+            cd /var/www/cratematch
+
+            # Pull latest changes
+            git pull origin main
+
+            # Install dependencies
+            npm ci --production
+
+            # Copy public files
+            npm run postinstall
+
+            # Restart the application
+            pm2 restart cratematch
+
+            # Check if restart was successful
+            if pm2 list | grep -q "cratematch.*online"; then
+              echo "✅ Deployment successful! Application is running."
+              pm2 status
+            else
+              echo "❌ Deployment failed! Application is not running."
+              pm2 logs cratematch --lines 20
+              exit 1
+            fi
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_PORT || 22 }}
+          script: |
+            # Check if the application is responding
+            sleep 5
+            if curl -f http://localhost:3000/health || curl -f http://localhost:3000/; then
+              echo "✅ Application is responding correctly"
+            else
+              echo "❌ Application is not responding"
+              pm2 logs cratematch --lines 10
+              exit 1
+            fi
+
+      - name: Notify deployment status
+        if: always()
         run: |
-          npm test || echo "No tests configured"
-
-    # Add your deployment steps here
-    # - name: Deploy to server
-    #   run: |
-    #     # Your deployment commands
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "🎉 Deployment completed successfully!"
+            echo "🌐 Your app is live at: http://${{ secrets.DROPLET_HOST }}"
+          else
+            echo "❌ Deployment failed!"
+          fi
