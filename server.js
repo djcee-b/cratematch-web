@@ -967,10 +967,10 @@ const requireActiveSubscriptionForProgress = async (req, res, next) => {
 
     // Check if user is in trial period
     if (machine.role === "trial") {
-      const trialEnd = new Date(machine.trial_end);
+      const trialEnd = machine.trial_end ? new Date(machine.trial_end) : null;
       const now = new Date();
 
-      if (now > trialEnd) {
+      if (trialEnd && now > trialEnd) {
         return res.status(403).json({
           error: "Trial expired",
           message: "Your trial has expired. Please upgrade to continue.",

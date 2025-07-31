@@ -138,7 +138,7 @@ const requireActiveSubscription = async (req, res, next) => {
 
     // Check if user is in trial period
     const now = new Date();
-    const trialEnd = new Date(machine.trial_end);
+    const trialEnd = machine.trial_end ? new Date(machine.trial_end) : null;
 
     // Debug trial date comparison
     console.log(`🔍 TRIAL CHECK for ${req.user.email}:`, {
@@ -146,17 +146,18 @@ const requireActiveSubscription = async (req, res, next) => {
       trial_start: machine.trial_start,
       trial_end: machine.trial_end,
       now_iso: now.toISOString(),
-      trialEnd_iso: trialEnd.toISOString(),
+      trialEnd_iso: trialEnd ? trialEnd.toISOString() : "null",
       isTrial: machine.role === "trial",
-      isExpired: now >= trialEnd,
-      timeDiff_ms: trialEnd.getTime() - now.getTime(),
-      timeDiff_days:
-        (trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000),
+      isExpired: machine.role === "trial" && trialEnd ? now >= trialEnd : false,
+      timeDiff_ms: trialEnd ? trialEnd.getTime() - now.getTime() : null,
+      timeDiff_days: trialEnd
+        ? (trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)
+        : null,
       now_date: now.toDateString(),
-      trial_end_date: trialEnd.toDateString(),
+      trial_end_date: trialEnd ? trialEnd.toDateString() : "null",
     });
 
-    if (machine.role === "trial" && now < trialEnd) {
+    if (machine.role === "trial" && trialEnd && now < trialEnd) {
       req.machine = machine;
       return next();
     }
@@ -229,7 +230,7 @@ const requireActiveSubscription = async (req, res, next) => {
     }
 
     // User's trial has expired - automatically downgrade to free instead of blocking
-    if (machine.role === "trial" && now >= trialEnd) {
+    if (machine.role === "trial" && trialEnd && now >= trialEnd) {
       console.log(
         "🔄 Trial expired for user:",
         req.user.email,
