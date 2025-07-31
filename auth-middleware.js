@@ -756,6 +756,7 @@ module.exports = {
   optionalAuthWithCircuitBreaker,
   rateLimit,
   requireActiveSubscription,
+  checkFreeUserExportLimit,
   clearSessionCache,
   clearSubscriptionCache,
   getCacheStats,

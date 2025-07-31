@@ -690,7 +690,7 @@ app.get(
 // Process playlist endpoint
 app.post(
   "/process-playlist",
-  requireAuthWithRateLimit,
+  ...requireAuthWithRateLimit,
   requireActiveSubscription,
   checkFreeUserExportLimit,
   async (req, res) => {
@@ -1833,7 +1833,7 @@ app.get("/settings", (req, res) => {
 });
 
 // Scan History API endpoints
-app.get("/api/scan-history", requireAuthWithRateLimit, async (req, res) => {
+app.get("/api/scan-history", ...requireAuthWithRateLimit, async (req, res) => {
   try {
     const userId = req.user.id;
     console.log("📖 Fetching scan history for user:", userId);
@@ -1875,7 +1875,8 @@ app.get("/api/scan-history", requireAuthWithRateLimit, async (req, res) => {
   }
 });
 
-app.post("/api/scan-history", requireAuthWithRateLimit, async (req, res) => {
+// Create new scan history entry
+app.post("/api/scan-history", ...requireAuthWithRateLimit, async (req, res) => {
   try {
     const userId = req.user.id;
     const {
