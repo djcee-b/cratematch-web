@@ -57,6 +57,19 @@ const requireActiveSubscription = async (req, res, next) => {
       req.user.email
     );
 
+    console.log(`🔍 MACHINE LOOKUP for ${req.user.email}:`, {
+      found: !!machine,
+      error: error ? error.message : null,
+      machineData: machine
+        ? {
+            id: machine.id,
+            role: machine.role,
+            trial_start: machine.trial_start,
+            trial_end: machine.trial_end,
+          }
+        : null,
+    });
+
     if (error) {
       console.error("Error fetching machine data:", error);
       return res.status(500).json({
