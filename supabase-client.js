@@ -105,6 +105,11 @@ const machineOperations = {
     return supabase.from("machines").update(updates).eq("id", machineId);
   },
 
+  // Get all machines (for admin operations like subscription checks)
+  getAllMachines: async () => {
+    return supabase.from("machines").select("*");
+  },
+
   // Get user by machine ID (alias for getMachine)
   getUser: async (machineId) => {
     return machineOperations.getMachine(machineId);

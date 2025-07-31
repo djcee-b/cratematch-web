@@ -6,11 +6,10 @@ let filteredHistory = [];
 
 // DOM elements
 let loadingOverlay,
-  userInfo,
-  userEmail,
-  subscriptionStatus,
-  upgradeBtnHeader,
-  settingsBtn,
+  headerNav,
+  trialBanner,
+  trialCountdown,
+  upgradeBtnBanner,
   signOutBtn;
 let refreshHistoryBtn, deleteAllHistoryBtn, refreshText, refreshSpinner;
 let historyList,
@@ -33,11 +32,10 @@ let tableViewBtn, listViewBtn, trackModalClose;
 function initializeDOMElements() {
   // Loading and user elements
   loadingOverlay = document.getElementById("loading-overlay");
-  userInfo = document.getElementById("user-info");
-  userEmail = document.getElementById("user-email");
-  subscriptionStatus = document.getElementById("subscription-status");
-  upgradeBtnHeader = document.getElementById("upgrade-btn-header");
-  settingsBtn = document.getElementById("settings-btn");
+  headerNav = document.getElementById("header-nav");
+  trialBanner = document.getElementById("trial-banner");
+  trialCountdown = document.getElementById("trial-countdown");
+  upgradeBtnBanner = document.getElementById("upgrade-btn-banner");
   signOutBtn = document.getElementById("sign-out-btn");
 
   // History controls
@@ -163,6 +161,72 @@ function setupEventListeners() {
     });
   }
 
+  // Trial banner upgrade button
+  if (upgradeBtnBanner) {
+    upgradeBtnBanner.addEventListener("click", () => {
+      window.location.href = "/pricing.html";
+    });
+  }
+
+  // Trial expiration modal event listeners
+  const trialUpgradeBtn = document.getElementById("trial-upgrade-btn");
+  const trialFreeBtn = document.getElementById("trial-free-btn");
+  const trialRemindBtn = document.getElementById("trial-remind-btn");
+
+  if (trialUpgradeBtn) {
+    trialUpgradeBtn.addEventListener("click", () => {
+      window.location.href = "/pricing.html";
+    });
+  }
+
+  if (trialFreeBtn) {
+    trialFreeBtn.addEventListener("click", async () => {
+      try {
+        const response = await fetch("/api/downgrade-to-free", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        if (response.ok) {
+          // Hide the modal
+          const trialExpirationModal = document.getElementById(
+            "trial-expiration-modal"
+          );
+          if (trialExpirationModal) {
+            trialExpirationModal.style.display = "none";
+          }
+
+          // Refresh the page to update the UI
+          window.location.reload();
+        } else {
+          console.error("Failed to downgrade to free user");
+          showError("Failed to switch to free user. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error downgrading to free user:", error);
+        showError("Failed to switch to free user. Please try again.");
+      }
+    });
+  }
+
+  if (trialRemindBtn) {
+    trialRemindBtn.addEventListener("click", () => {
+      // Hide the modal but don't change anything
+      const trialExpirationModal = document.getElementById(
+        "trial-expiration-modal"
+      );
+      if (trialExpirationModal) {
+        trialExpirationModal.style.display = "none";
+      }
+
+      // Set a flag to show the modal again in 24 hours
+      localStorage.setItem("trialExpirationRemindLater", Date.now().toString());
+    });
+  }
+
   // Close modal on overlay click
   if (trackModal) {
     trackModal.addEventListener("click", (e) => {
@@ -191,13 +255,6 @@ function setupEventListeners() {
       }
     });
   }
-
-  // Settings button
-  if (settingsBtn) {
-    settingsBtn.addEventListener("click", () => {
-      window.location.href = "/settings.html";
-    });
-  }
 }
 
 // Set refresh loading state
@@ -224,7 +281,8 @@ async function checkAuth() {
   }
 
   try {
-    const response = await fetch("/auth/me", {
+    // Use the more permissive /api/auth/verify endpoint instead of /auth/me
+    const response = await fetch("/api/auth/verify", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -235,14 +293,54 @@ async function checkAuth() {
       currentUser = data.user;
       authToken = token;
       updateUserInterface(data);
+
+      // Start heartbeat mechanism
+      startHeartbeat();
+
       loadScanHistory();
       hideLoadingOverlay();
+    } else if (response.status === 403) {
+      // Handle trial expiration gracefully
+      try {
+        const errorData = await response.json();
+        if (errorData.trialExpired) {
+          // Show trial expiration modal instead of logging out
+          showTrialExpirationModal();
+          // Still load the interface so user can see the modal
+          const data = await fetch("/api/auth/verify", {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then((r) => (r.ok ? r.json() : null));
+
+          if (data) {
+            currentUser = data.user;
+            authToken = token;
+            updateUserInterface(data);
+            loadScanHistory();
+            hideLoadingOverlay();
+          }
+          return;
+        }
+      } catch (parseError) {
+        console.error("Error parsing 403 response:", parseError);
+      }
+
+      // Other 403 errors - redirect to auth
+      localStorage.removeItem("authToken");
+      window.location.href = "/auth.html";
     } else {
+      // Other errors - redirect to auth page
       localStorage.removeItem("authToken");
       window.location.href = "/auth.html";
     }
   } catch (error) {
     console.error("Auth check error:", error);
+    // Only logout on network errors, not auth errors
+    if (error.name === "TypeError" && error.message.includes("fetch")) {
+      // Network error - don't logout, just show error
+      console.log("Network error during auth check, retrying...");
+      setTimeout(checkAuth, 5000); // Retry in 5 seconds
+      return;
+    }
     localStorage.removeItem("authToken");
     window.location.href = "/auth.html";
   }
@@ -250,50 +348,146 @@ async function checkAuth() {
 
 // Update user interface
 function updateUserInterface(data) {
-  if (userEmail) {
-    userEmail.textContent = data.user.email;
-  }
-
   const status = data.subscriptionStatus || "trial";
-  let statusText, statusClass;
 
-  switch (status) {
-    case "trial":
-      statusText = "Free Trial";
-      statusClass = "trial";
-      if (upgradeBtnHeader) {
-        upgradeBtnHeader.style.display = "inline-block";
-      }
-      break;
-    case "premium":
-      statusText = "Premium";
-      statusClass = "active";
-      if (upgradeBtnHeader) {
-        upgradeBtnHeader.style.display = "none";
-      }
-      break;
-    case "free":
-      statusText = "Free";
-      statusClass = "free";
-      if (upgradeBtnHeader) {
-        upgradeBtnHeader.style.display = "inline-block";
-      }
-      break;
-    default:
-      statusText = "Free";
-      statusClass = "free";
-      if (upgradeBtnHeader) {
-        upgradeBtnHeader.style.display = "inline-block";
-      }
+  // Handle trial banner
+  if (trialBanner) {
+    if (status === "trial") {
+      trialBanner.style.display = "block";
+      // Start countdown timer for trial users
+      const trialEndDate =
+        data.machine?.trial_end ||
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      startTrialCountdown(trialEndDate);
+    } else {
+      trialBanner.style.display = "none";
+    }
   }
 
-  if (subscriptionStatus) {
-    subscriptionStatus.textContent = statusText;
-    subscriptionStatus.className = `subscription-status ${statusClass}`;
+  // Show header navigation
+  if (headerNav) {
+    headerNav.style.display = "flex";
+  }
+}
+
+// Heartbeat mechanism to keep session alive
+function startHeartbeat() {
+  // Send a heartbeat every 5 minutes to keep the session active
+  setInterval(async () => {
+    if (!authToken) return;
+
+    try {
+      const response = await fetch("/api/auth/verify", {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
+      if (response.ok) {
+        console.log("💓 Heartbeat successful");
+      } else {
+        console.warn("⚠️ Heartbeat failed, session may be expiring");
+      }
+    } catch (error) {
+      console.error("❌ Heartbeat error:", error);
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+
+  console.log("💓 Heartbeat mechanism started");
+}
+
+// Trial expiration modal functions
+function showTrialExpirationModal() {
+  const modal = document.getElementById("trial-expiration-modal");
+  if (modal) {
+    modal.style.display = "flex";
+  }
+}
+
+function checkTrialExpirationReminder() {
+  const remindLater = localStorage.getItem("trialExpirationRemindLater");
+  if (remindLater) {
+    const remindTime = parseInt(remindLater);
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+    if (now - remindTime > twentyFourHours) {
+      // 24 hours have passed, show the modal again
+      localStorage.removeItem("trialExpirationRemindLater");
+      return true;
+    }
+  }
+  return false;
+}
+
+// Trial countdown timer
+let countdownInterval = null;
+
+function startTrialCountdown(trialEndDate) {
+  // Clear any existing countdown
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
   }
 
-  if (userInfo) {
-    userInfo.style.display = "flex";
+  // Use the existing countdown element in the trial banner
+  let countdownElement = document.getElementById("trial-countdown");
+  if (!countdownElement) {
+    return;
+  }
+
+  // Update countdown immediately
+  updateTrialCountdown(trialEndDate, countdownElement);
+
+  // Update countdown every second
+  countdownInterval = setInterval(() => {
+    updateTrialCountdown(trialEndDate, countdownElement);
+  }, 1000);
+}
+
+function updateTrialCountdown(trialEndDate, countdownElement) {
+  if (!trialEndDate || !countdownElement) {
+    return;
+  }
+
+  const now = new Date();
+  const trialEnd = new Date(trialEndDate);
+  const timeLeft = trialEnd - now;
+
+  if (timeLeft <= 0) {
+    // Trial has expired
+    countdownElement.textContent = "Expired";
+    countdownElement.className = "trial-countdown expired";
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+    }
+    return;
+  }
+
+  // Calculate time units
+  const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+  const hours = Math.floor(
+    (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+  );
+  const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+  // Format countdown text
+  let countdownText = "";
+  if (days > 0) {
+    countdownText = `${days}d ${hours}h ${minutes}m`;
+  } else if (hours > 0) {
+    countdownText = `${hours}h ${minutes}m ${seconds}s`;
+  } else if (minutes > 0) {
+    countdownText = `${minutes}m ${seconds}s`;
+  } else {
+    countdownText = `${seconds}s`;
+  }
+
+  countdownElement.textContent = countdownText;
+
+  // Add urgency styling for last 24 hours
+  if (timeLeft < 24 * 60 * 60 * 1000) {
+    countdownElement.className = "trial-countdown urgent";
+  } else {
+    countdownElement.className = "trial-countdown";
   }
 }
 

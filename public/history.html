@@ -309,21 +309,34 @@
     </div>
 
     <header class="header">
-        <div class="header-content">
-            <div class="logo">
-                <h1>CrateMatch</h1>
-                <span class="beta-label">BETA</span>
-            </div>
-            
-            <div class="user-info" id="user-info" style="display: none;">
-                <span class="user-email" id="user-email"></span>
-                <span class="subscription-status" id="subscription-status">Free</span>
-                <button class="upgrade-btn-header" id="upgrade-btn-header" style="display: none;">Upgrade to Pro</button>
-                <button class="settings-btn" id="settings-btn">Settings</button>
-                <button class="sign-out-btn" id="sign-out-btn">Sign Out</button>
+        <div class="container">
+            <div class="header-content">
+                <div class="header-left">
+                    <a href="/" class="logo">
+                        <h1>CrateMatch <span class="beta-label">beta</span></h1>
+                    </a>
+                </div>
+                <div class="header-nav" id="header-nav" style="display: none;">
+                    <a href="/app" class="nav-btn">Back to App</a>
+                    <button class="nav-btn" onclick="window.location.href='/settings'">Settings</button>
+                    <button class="nav-btn sign-out-btn" id="sign-out-btn">Sign Out</button>
+                </div>
             </div>
         </div>
     </header>
+
+    <!-- Trial Banner (shown only for trial users) -->
+    <div class="trial-banner" id="trial-banner" style="display: none;">
+        <div class="container">
+            <div class="trial-banner-content">
+                <div class="trial-banner-left">
+                    <span class="trial-banner-label">Free Trial</span>
+                    <span class="trial-countdown" id="trial-countdown"></span>
+                </div>
+                <button class="upgrade-btn-banner" id="upgrade-btn-banner">Upgrade to Premium</button>
+            </div>
+        </div>
+    </div>
 
     <main class="main-content">
         <div class="history-container">
@@ -335,7 +348,6 @@
                         <span id="refresh-spinner" class="loading-spinner" style="display: none;"></span>
                     </button>
                     <button class="btn btn-danger" id="delete-all-history-btn">Delete All</button>
-                    <a href="/app.html" class="back-to-app">Back to App</a>
                 </div>
             </div>
 
@@ -407,6 +419,41 @@
                         <!-- List text will be populated here -->
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trial Expiration Modal -->
+    <div class="trial-expiration-modal" id="trial-expiration-modal">
+        <div class="trial-expiration-content">
+            <div class="trial-expiration-icon">⏰</div>
+            <h3 class="trial-expiration-title">Trial Expired</h3>
+            <p class="trial-expiration-message">Your free trial has ended. Choose how you'd like to continue:</p>
+            
+            <div class="trial-expiration-options">
+                <button class="trial-option-btn trial-upgrade-btn" id="trial-upgrade-btn">
+                    <div class="trial-option-icon">⭐</div>
+                    <div class="trial-option-content">
+                        <h4>Upgrade to Premium</h4>
+                        <p>Unlimited playlist processing and all features</p>
+                    </div>
+                </button>
+                
+                <button class="trial-option-btn trial-free-btn" id="trial-free-btn">
+                    <div class="trial-option-icon">🎵</div>
+                    <div class="trial-option-content">
+                        <h4>Continue as Free User</h4>
+                        <p>Limited to 1 playlist per day with basic features</p>
+                    </div>
+                </button>
+                
+                <button class="trial-option-btn trial-remind-btn" id="trial-remind-btn">
+                    <div class="trial-option-icon">⏰</div>
+                    <div class="trial-option-content">
+                        <h4>Remind Me Later</h4>
+                        <p>I'll decide later (you can still use free features)</p>
+                    </div>
+                </button>
             </div>
         </div>
     </div>

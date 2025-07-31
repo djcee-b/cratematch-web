@@ -106,12 +106,12 @@ function setLoading(button, isLoading) {
   const btnLoading = button.querySelector(".btn-loading");
 
   if (isLoading) {
-    btnText.classList.add("hidden");
-    btnLoading.classList.remove("hidden");
+    if (btnText) btnText.classList.add("hidden");
+    if (btnLoading) btnLoading.classList.remove("hidden");
     button.disabled = true;
   } else {
-    btnText.classList.remove("hidden");
-    btnLoading.classList.add("hidden");
+    if (btnText) btnText.classList.remove("hidden");
+    if (btnLoading) btnLoading.classList.add("hidden");
     button.disabled = false;
   }
 }

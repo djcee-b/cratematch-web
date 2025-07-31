@@ -3,6 +3,7 @@ let currentUser = null;
 let authToken = null;
 let uploadedDatabase = null;
 let currentDatabaseFileName = null;
+let tokenRefreshInterval = null;
 
 // DOM elements - will be initialized after DOM loads
 let loadingOverlay,
@@ -24,18 +25,23 @@ let resultsSection,
   downloadBtn,
   newPlaylistBtn;
 
-let processingOverlay, errorModal, errorMessage, errorClose, errorOk;
+let processingOverlay,
+  errorModal,
+  errorMessage,
+  errorClose,
+  errorOk,
+  errorUpgradeBtn;
 let subscriptionModal, subscriptionClose;
+let trialExpirationModal, trialUpgradeBtn, trialFreeBtn, trialRemindBtn;
 
 // Initialize DOM elements
 function initializeDOMElements() {
   // Main elements
   loadingOverlay = document.getElementById("loading-overlay");
-  userInfo = document.getElementById("user-info");
-  userEmail = document.getElementById("user-email");
-  subscriptionStatus = document.getElementById("subscription-status");
-  upgradeBtnHeader = document.getElementById("upgrade-btn-header");
-  settingsBtn = document.getElementById("settings-btn");
+  headerNav = document.getElementById("header-nav");
+  trialBanner = document.getElementById("trial-banner");
+  trialCountdown = document.getElementById("trial-countdown");
+  upgradeBtnBanner = document.getElementById("upgrade-btn-banner");
   signOutBtn = document.getElementById("sign-out-btn");
   databaseDate = document.getElementById("database-date");
 
@@ -73,8 +79,21 @@ function initializeDOMElements() {
   errorMessage = document.getElementById("error-message");
   errorClose = document.getElementById("error-close");
   errorOk = document.getElementById("error-ok");
+  errorUpgradeBtn = document.getElementById("error-upgrade-btn");
   subscriptionModal = document.getElementById("subscription-modal");
   subscriptionClose = document.getElementById("subscription-close");
+
+  // Trial expiration modal elements
+  trialExpirationModal = document.getElementById("trial-expiration-modal");
+  trialUpgradeBtn = document.getElementById("trial-upgrade-btn");
+  trialFreeBtn = document.getElementById("trial-free-btn");
+  trialRemindBtn = document.getElementById("trial-remind-btn");
+
+  // Header subscription badge and upgrade button
+  headerSubscriptionBadge = document.getElementById(
+    "header-subscription-badge"
+  );
+  headerUpgradeBtn = document.getElementById("header-upgrade-btn");
 }
 
 // Setup event listeners
@@ -99,76 +118,15 @@ function setupEventListeners() {
   // New playlist button
   if (newPlaylistBtn) {
     newPlaylistBtn.addEventListener("click", () => {
-      // Reset form fields
-      if (playlistUrl) playlistUrl.value = "";
+      // Simply refresh the page to reset everything completely
+      window.location.reload();
+    });
+  }
 
-      // Reset button state
-      if (processBtn) {
-        processBtn.style.display = "block";
-        processBtn.disabled = true;
-        processBtn.textContent = "Create Crate";
-      }
-
-      // Hide progress container
-      const progressContainer = document.getElementById("progress-container");
-      if (progressContainer) {
-        progressContainer.style.display = "none";
-      }
-
-      // Clear any error messages
-      if (errorMessage) {
-        errorMessage.textContent = "";
-      }
-
-      // Reset results section
-      if (resultsSummary) resultsSummary.textContent = "";
-      if (resultsDetails) resultsDetails.innerHTML = "";
-      if (downloadSection) downloadSection.style.display = "none";
-
-      // Hide results and show process section
-      if (resultsSection) resultsSection.style.display = "none";
-      const processSection = document.getElementById("process-section");
-      if (processSection) processSection.style.display = "block";
-
-      // Restore original process section content if it was modified
-      const sectionContent = document.querySelector(
-        "#process-section .section-content"
-      );
-      if (sectionContent && !sectionContent.querySelector(".form-group")) {
-        // If the content was replaced with processing state, restore it
-        sectionContent.innerHTML = `
-          <div class="form-group">
-            <label for="playlist-url">Spotify Playlist URL</label>
-            <input
-              type="url"
-              id="playlist-url"
-              placeholder="https://open.spotify.com/playlist/..."
-              required
-            />
-          </div>
-
-          <button type="button" id="process-btn" class="process-btn" disabled>
-            Create Crate
-          </button>
-        `;
-
-        // Re-attach event listeners to the restored elements
-        const restoredPlaylistUrl = document.getElementById("playlist-url");
-        const restoredProcessBtn = document.getElementById("process-btn");
-
-        if (restoredPlaylistUrl) {
-          restoredPlaylistUrl.addEventListener("input", () => {
-            if (restoredProcessBtn) {
-              restoredProcessBtn.disabled =
-                !restoredPlaylistUrl.value.trim() || !uploadedDatabase;
-            }
-          });
-        }
-
-        if (restoredProcessBtn) {
-          restoredProcessBtn.addEventListener("click", processPlaylist);
-        }
-      }
+  // Handle trial banner upgrade button
+  if (upgradeBtnBanner) {
+    upgradeBtnBanner.addEventListener("click", () => {
+      window.location.href = "/pricing.html";
     });
   }
 
@@ -185,6 +143,13 @@ function setupEventListeners() {
       } catch (error) {
         console.error("Sign out error:", error);
       } finally {
+        // Clear intervals and local storage
+        if (tokenRefreshInterval) {
+          clearInterval(tokenRefreshInterval);
+        }
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+        }
         localStorage.removeItem("authToken");
         window.location.href = "/auth.html";
       }
@@ -198,7 +163,63 @@ function setupEventListeners() {
     });
   }
 
-  // Error modal close buttons
+  // Trial expiration modal event listeners
+  if (trialUpgradeBtn) {
+    trialUpgradeBtn.addEventListener("click", () => {
+      window.location.href = "/pricing.html";
+    });
+  }
+
+  if (trialFreeBtn) {
+    trialFreeBtn.addEventListener("click", async () => {
+      try {
+        const response = await fetch("/api/downgrade-to-free", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        if (response.ok) {
+          // Hide the modal
+          if (trialExpirationModal) {
+            trialExpirationModal.style.display = "none";
+          }
+
+          // Refresh the page to update the UI
+          window.location.reload();
+        } else {
+          console.error("Failed to downgrade to free user");
+          showError("Failed to switch to free user. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error downgrading to free user:", error);
+        showError("Failed to switch to free user. Please try again.");
+      }
+    });
+  }
+
+  if (trialRemindBtn) {
+    trialRemindBtn.addEventListener("click", () => {
+      // Hide the modal but don't change anything
+      if (trialExpirationModal) {
+        trialExpirationModal.style.display = "none";
+      }
+
+      // Set a flag to show the modal again in 24 hours
+      localStorage.setItem("trialExpirationRemindLater", Date.now().toString());
+    });
+  }
+
+  // Header upgrade button event listener
+  if (headerUpgradeBtn) {
+    headerUpgradeBtn.addEventListener("click", () => {
+      window.location.href = "/pricing.html";
+    });
+  }
+
+  // Error modal buttons
   if (errorClose) {
     errorClose.addEventListener("click", () => {
       if (errorModal) errorModal.style.display = "none";
@@ -211,12 +232,29 @@ function setupEventListeners() {
     });
   }
 
+  if (errorUpgradeBtn) {
+    errorUpgradeBtn.addEventListener("click", () => {
+      window.location.href = "/pricing.html";
+    });
+  }
+
   // Subscription modal
   if (subscriptionClose) {
     subscriptionClose.addEventListener("click", () => {
       if (subscriptionModal) subscriptionModal.style.display = "none";
     });
   }
+
+  // Handle page visibility changes (tab switching, minimizing)
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && authToken) {
+      // Page became visible again, refresh auth status
+      console.log("🔄 Page became visible, refreshing auth status...");
+      setTimeout(() => {
+        checkAuth();
+      }, 1000); // Small delay to ensure page is fully loaded
+    }
+  });
 
   // Close modals when clicking outside
   window.addEventListener("click", (e) => {
@@ -239,7 +277,8 @@ async function checkAuth() {
   }
 
   try {
-    const response = await fetch("/auth/me", {
+    // Use the more permissive /api/auth/verify endpoint instead of /auth/me
+    const response = await fetch("/api/auth/verify", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -249,7 +288,14 @@ async function checkAuth() {
       const data = await response.json();
       currentUser = data.user;
       authToken = token;
+
       updateUserInterface(data);
+
+      // Start token refresh mechanism
+      startTokenRefresh();
+
+      // Start heartbeat mechanism
+      startHeartbeat();
 
       // Check if user has uploaded a database
       const hasDatabase = await checkUserDatabase();
@@ -263,13 +309,47 @@ async function checkAuth() {
 
       // Hide loading overlay after successful auth
       hideLoadingOverlay();
+    } else if (response.status === 403) {
+      // Handle trial expiration gracefully
+      try {
+        const errorData = await response.json();
+        if (errorData.trialExpired) {
+          // Show trial expiration modal instead of logging out
+          showTrialExpirationModal();
+          // Still load the interface so user can see the modal
+          const data = await fetch("/api/auth/verify", {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then((r) => (r.ok ? r.json() : null));
+
+          if (data) {
+            currentUser = data.user;
+            authToken = token;
+            updateUserInterface(data);
+            hideLoadingOverlay();
+          }
+          return;
+        }
+      } catch (parseError) {
+        console.error("Error parsing 403 response:", parseError);
+      }
+
+      // Other 403 errors - redirect to auth
+      localStorage.removeItem("authToken");
+      window.location.href = "/auth.html";
     } else {
-      // Token is invalid, redirect to auth page
+      // Other errors - redirect to auth page
       localStorage.removeItem("authToken");
       window.location.href = "/auth.html";
     }
   } catch (error) {
     console.error("Auth check error:", error);
+    // Only logout on network errors, not auth errors
+    if (error.name === "TypeError" && error.message.includes("fetch")) {
+      // Network error - don't logout, just show error
+      console.log("Network error during auth check, retrying...");
+      setTimeout(checkAuth, 5000); // Retry in 5 seconds
+      return;
+    }
     localStorage.removeItem("authToken");
     window.location.href = "/auth.html";
   }
@@ -307,70 +387,200 @@ async function checkUserDatabase() {
 
 // Update user interface with user data
 function updateUserInterface(data) {
-  if (userEmail) {
-    userEmail.textContent = data.user.email;
+  const status = data.subscriptionStatus || "trial";
+
+  // Update header subscription badge and upgrade button
+  if (headerSubscriptionBadge) {
+    headerSubscriptionBadge.textContent = status.toUpperCase();
+    headerSubscriptionBadge.className = `subscription-badge ${status}`;
+    headerSubscriptionBadge.style.display = "inline-block";
   }
 
-  const status = data.subscriptionStatus || "trial";
-  let statusText, statusClass;
+  // Show upgrade button for free users
+  if (headerUpgradeBtn) {
+    if (status === "free") {
+      headerUpgradeBtn.style.display = "inline-block";
+    } else {
+      headerUpgradeBtn.style.display = "none";
+    }
+  }
 
   switch (status) {
     case "trial":
-      statusText = "Free Trial";
-      statusClass = "trial";
-      // Show upgrade banner and button for trial users
-      if (upgradeBanner) {
-        upgradeBanner.style.display = "block";
+      // Show trial banner and countdown for trial users
+      if (trialBanner) {
+        trialBanner.style.display = "block";
       }
-      if (upgradeBtnHeader) {
-        upgradeBtnHeader.style.display = "inline-block";
-      }
+      // Start countdown timer for trial users
+      const trialEndDate =
+        data.machine?.trial_end ||
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      startTrialCountdown(trialEndDate);
       break;
     case "premium":
-      statusText = "Premium";
-      statusClass = "active";
-      // Hide upgrade banner and button for premium users
-      if (upgradeBanner) {
-        upgradeBanner.style.display = "none";
-      }
-      if (upgradeBtnHeader) {
-        upgradeBtnHeader.style.display = "none";
+      // Hide trial banner for premium users
+      if (trialBanner) {
+        trialBanner.style.display = "none";
       }
       break;
     case "free":
-      statusText = "Free";
-      statusClass = "free";
-      // Show upgrade banner and button for free users
-      if (upgradeBanner) {
-        upgradeBanner.style.display = "block";
+      // Hide trial banner for free users
+      if (trialBanner) {
+        trialBanner.style.display = "none";
       }
-      if (upgradeBtnHeader) {
-        upgradeBtnHeader.style.display = "inline-block";
-      }
+
       break;
     default:
-      statusText = "Free";
-      statusClass = "free";
-      // Show upgrade banner and button for free users
-      if (upgradeBanner) {
-        upgradeBanner.style.display = "block";
-      }
-      if (upgradeBtnHeader) {
-        upgradeBtnHeader.style.display = "inline-block";
+      // Hide trial banner for default users
+      if (trialBanner) {
+        trialBanner.style.display = "none";
       }
   }
 
-  if (subscriptionStatus) {
-    subscriptionStatus.textContent = statusText;
-    subscriptionStatus.className = `subscription-status ${statusClass}`;
-  }
-
-  if (userInfo) {
-    userInfo.style.display = "flex";
+  // Show header navigation
+  if (headerNav) {
+    headerNav.style.display = "flex";
   }
 
   // Setup settings button after user info is shown
   setupSettingsButton();
+}
+
+// Token refresh mechanism to prevent token expiration
+function startTokenRefresh() {
+  // Clear any existing interval
+  if (tokenRefreshInterval) {
+    clearInterval(tokenRefreshInterval);
+  }
+
+  // Refresh token every 45 minutes (tokens typically expire in 1 hour)
+  tokenRefreshInterval = setInterval(async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        clearInterval(tokenRefreshInterval);
+        return;
+      }
+
+      // Call the verify endpoint to refresh the session
+      const response = await fetch("/api/auth/verify", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update current user data
+        currentUser = data.user;
+        console.log("✅ Token refreshed successfully");
+      } else {
+        console.warn("⚠️ Token refresh failed, will retry on next interval");
+      }
+    } catch (error) {
+      console.error("❌ Token refresh error:", error);
+      // Don't logout on refresh errors, just log them
+    }
+  }, 45 * 60 * 1000); // 45 minutes
+
+  console.log("🔄 Token refresh mechanism started");
+}
+
+// Heartbeat mechanism to keep session alive
+function startHeartbeat() {
+  // Send a heartbeat every 5 minutes to keep the session active
+  setInterval(async () => {
+    if (!authToken) return;
+
+    try {
+      const response = await fetch("/api/auth/verify", {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
+      if (response.ok) {
+        console.log("💓 Heartbeat successful");
+      } else {
+        console.warn("⚠️ Heartbeat failed, session may be expiring");
+      }
+    } catch (error) {
+      console.error("❌ Heartbeat error:", error);
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+
+  console.log("💓 Heartbeat mechanism started");
+}
+
+// Trial countdown timer
+let countdownInterval = null;
+
+function startTrialCountdown(trialEndDate) {
+  // Clear any existing countdown
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+  }
+
+  // Use the existing countdown element in the trial banner
+  let countdownElement = document.getElementById("trial-countdown");
+  if (!countdownElement) {
+    return;
+  }
+
+  // Update countdown immediately
+  updateTrialCountdown(trialEndDate, countdownElement);
+
+  // Update countdown every second
+  countdownInterval = setInterval(() => {
+    updateTrialCountdown(trialEndDate, countdownElement);
+  }, 1000);
+}
+
+function updateTrialCountdown(trialEndDate, countdownElement) {
+  if (!trialEndDate || !countdownElement) {
+    return;
+  }
+
+  const now = new Date();
+  const trialEnd = new Date(trialEndDate);
+  const timeLeft = trialEnd - now;
+
+  if (timeLeft <= 0) {
+    // Trial has expired
+    countdownElement.textContent = "Expired";
+    countdownElement.className = "trial-countdown expired";
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+    }
+    return;
+  }
+
+  // Calculate days, hours, minutes, seconds
+  const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+  const hours = Math.floor(
+    (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+  );
+  const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+  // Format countdown text
+  let countdownText = "";
+  if (days > 0) {
+    countdownText = `${days}d ${hours}h ${minutes}m`;
+  } else if (hours > 0) {
+    countdownText = `${hours}h ${minutes}m ${seconds}s`;
+  } else if (minutes > 0) {
+    countdownText = `${minutes}m ${seconds}s`;
+  } else {
+    countdownText = `${seconds}s`;
+  }
+
+  countdownElement.textContent = countdownText;
+
+  // Add urgency styling for last 24 hours
+  if (timeLeft < 24 * 60 * 60 * 1000) {
+    countdownElement.className = "trial-countdown urgent";
+  } else {
+    countdownElement.className = "trial-countdown";
+  }
 }
 
 // Load user's uploaded databases
@@ -626,13 +836,41 @@ async function processPlaylist() {
         } else if (data.type === "error") {
           console.error("Processing error:", data);
           eventSource.close();
-          showError(data.message || "Processing failed");
-          // Hide processing overlay
-          if (processingOverlay) {
-            processingOverlay.style.display = "none";
-          }
-          if (processBtn) {
-            processBtn.style.display = "block";
+
+          // Check if this is the 50+ tracks error for free users
+          if (
+            data.message &&
+            data.message.includes("more than 50 tracks") &&
+            data.message.includes("Free users are limited")
+          ) {
+            console.log(
+              "🔄 50+ tracks error detected, showing enhanced error..."
+            );
+
+            // Hide processing overlay immediately
+            if (processingOverlay) {
+              processingOverlay.style.display = "none";
+            }
+
+            // Show enhanced error with countdown and better styling
+            showEnhancedError(
+              data.message || "Processing failed",
+              data.showUpgrade,
+              () => {
+                console.log("🔄 Resetting page after user acknowledgment...");
+                window.location.reload();
+              }
+            );
+          } else {
+            // Handle other errors normally
+            showError(data.message || "Processing failed", data.showUpgrade);
+            // Hide processing overlay
+            if (processingOverlay) {
+              processingOverlay.style.display = "none";
+            }
+            if (processBtn) {
+              processBtn.style.display = "block";
+            }
           }
         }
       } catch (error) {
@@ -643,7 +881,38 @@ async function processPlaylist() {
     eventSource.onerror = function (error) {
       console.error("EventSource error:", error);
       eventSource.close();
-      showError("Connection lost. Please try again.");
+
+      // Check if it's an auth error (401/403)
+      if (
+        error &&
+        error.target &&
+        error.target.readyState === EventSource.CLOSED
+      ) {
+        // Try to handle auth errors gracefully
+        console.log("🔄 EventSource closed, checking auth status...");
+        setTimeout(async () => {
+          try {
+            const response = await fetch("/api/auth/verify", {
+              headers: { Authorization: `Bearer ${authToken}` },
+            });
+            if (!response.ok) {
+              // Auth failed, show error but don't logout immediately
+              showError(
+                "Authentication issue. Please refresh the page and try again."
+              );
+            } else {
+              // Auth is fine, show generic error
+              showError("Connection lost. Please try again.");
+            }
+          } catch (authError) {
+            console.error("Auth check failed:", authError);
+            showError("Connection lost. Please try again.");
+          }
+        }, 1000);
+      } else {
+        showError("Connection lost. Please try again.");
+      }
+
       // Hide processing overlay
       if (processingOverlay) {
         processingOverlay.style.display = "none";
@@ -1396,12 +1665,131 @@ function showTrackDetailsModal(type) {
 }
 
 // Error handling
-function showError(message) {
+function showError(message, showUpgrade = false) {
   if (errorMessage) {
     errorMessage.textContent = message;
   }
+
+  // Show/hide upgrade button based on parameter
+  if (errorUpgradeBtn) {
+    errorUpgradeBtn.style.display = showUpgrade ? "inline-block" : "none";
+  }
+
   if (errorModal) {
     errorModal.style.display = "flex";
+  }
+}
+
+// Enhanced error handling for 50+ tracks error with countdown and better UX
+function showEnhancedError(message, showUpgrade = false, onComplete = null) {
+  // Create enhanced error modal if it doesn't exist
+  let enhancedErrorModal = document.getElementById("enhanced-error-modal");
+
+  if (!enhancedErrorModal) {
+    enhancedErrorModal = document.createElement("div");
+    enhancedErrorModal.id = "enhanced-error-modal";
+    enhancedErrorModal.className = "enhanced-error-modal";
+    enhancedErrorModal.innerHTML = `
+      <div class="enhanced-error-content">
+        <div class="enhanced-error-header">
+          <div class="enhanced-error-icon">⚠️</div>
+          <h3>Playlist Too Large</h3>
+          <button class="enhanced-error-close" onclick="closeEnhancedError()">×</button>
+        </div>
+        <div class="enhanced-error-body">
+          <p class="enhanced-error-message"></p>
+          <div class="enhanced-error-countdown">
+            <div class="countdown-text">Page will reset in <span class="countdown-number">5</span> seconds</div>
+            <div class="countdown-progress">
+              <div class="countdown-progress-fill"></div>
+            </div>
+          </div>
+          <div class="enhanced-error-actions">
+            <button class="enhanced-error-reset-now" onclick="resetPageNow()">Reset Now</button>
+            <button class="enhanced-error-upgrade" onclick="window.location.href='/pricing.html'" style="display: none;">
+              Upgrade to Premium
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(enhancedErrorModal);
+  }
+
+  // Update message
+  const messageElement = enhancedErrorModal.querySelector(
+    ".enhanced-error-message"
+  );
+  if (messageElement) {
+    messageElement.textContent = message;
+  }
+
+  // Show/hide upgrade button
+  const upgradeBtn = enhancedErrorModal.querySelector(
+    ".enhanced-error-upgrade"
+  );
+  if (upgradeBtn) {
+    upgradeBtn.style.display = showUpgrade ? "inline-block" : "none";
+  }
+
+  // Show modal
+  enhancedErrorModal.style.display = "flex";
+  document.body.style.overflow = "hidden";
+
+  // Start countdown
+  let countdown = 5;
+  const countdownNumber = enhancedErrorModal.querySelector(".countdown-number");
+  const countdownProgressFill = enhancedErrorModal.querySelector(
+    ".countdown-progress-fill"
+  );
+
+  const countdownInterval = setInterval(() => {
+    countdown--;
+    if (countdownNumber) {
+      countdownNumber.textContent = countdown;
+    }
+    if (countdownProgressFill) {
+      const progress = ((5 - countdown) / 5) * 100;
+      countdownProgressFill.style.width = `${progress}%`;
+    }
+
+    if (countdown <= 0) {
+      clearInterval(countdownInterval);
+      if (onComplete) {
+        onComplete();
+      }
+    }
+  }, 1000);
+
+  // Store the interval and callback for manual reset
+  window.enhancedErrorCountdown = {
+    interval: countdownInterval,
+    onComplete: onComplete,
+  };
+}
+
+// Close enhanced error modal
+function closeEnhancedError() {
+  const modal = document.getElementById("enhanced-error-modal");
+  if (modal) {
+    modal.style.display = "none";
+    document.body.style.overflow = "auto";
+  }
+
+  // Clear countdown
+  if (window.enhancedErrorCountdown) {
+    clearInterval(window.enhancedErrorCountdown.interval);
+    window.enhancedErrorCountdown = null;
+  }
+}
+
+// Reset page immediately
+function resetPageNow() {
+  if (window.enhancedErrorCountdown) {
+    clearInterval(window.enhancedErrorCountdown.interval);
+    if (window.enhancedErrorCountdown.onComplete) {
+      window.enhancedErrorCountdown.onComplete();
+    }
   }
 }
 
@@ -1410,6 +1798,67 @@ function showSubscriptionModal() {
   if (subscriptionModal) {
     subscriptionModal.style.display = "flex";
   }
+}
+
+// Trial expiration modal
+function showTrialExpirationModal() {
+  if (trialExpirationModal) {
+    trialExpirationModal.style.display = "flex";
+  }
+}
+
+// Check if we should show trial expiration modal
+function checkTrialExpirationReminder() {
+  const remindLater = localStorage.getItem("trialExpirationRemindLater");
+  if (remindLater) {
+    const remindTime = parseInt(remindLater);
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+    if (now - remindTime > twentyFourHours) {
+      // 24 hours have passed, show the modal again
+      localStorage.removeItem("trialExpirationRemindLater");
+      return true;
+    }
+  }
+  return false;
+}
+
+// Global error handler for trial expiration and auth issues
+async function handleApiError(response) {
+  if (response.status === 403) {
+    try {
+      const data = await response.json();
+      if (data.trialExpired) {
+        showTrialExpirationModal();
+        return true; // Error was handled
+      }
+    } catch (error) {
+      // If we can't parse the response, continue with normal error handling
+    }
+  } else if (response.status === 401) {
+    // Token expired or invalid - try to refresh
+    console.log("🔄 401 error detected, attempting token refresh...");
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      try {
+        const refreshResponse = await fetch("/api/auth/verify", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (refreshResponse.ok) {
+          console.log("✅ Token refresh successful");
+          return true; // Error was handled
+        }
+      } catch (refreshError) {
+        console.error("❌ Token refresh failed:", refreshError);
+      }
+    }
+    // If refresh fails, redirect to auth
+    localStorage.removeItem("authToken");
+    window.location.href = "/auth.html";
+    return true; // Error was handled
+  }
+  return false; // Error was not handled
 }
 
 // Settings functionality
@@ -1537,10 +1986,7 @@ async function handleSettingsFileUpload(file) {
       }, 2000);
     } else {
       if (response.status === 403 && data.trialExpired) {
-        showSettingsUploadStatus(
-          "Your trial has expired. Please upgrade to continue.",
-          "error"
-        );
+        showTrialExpirationModal();
       } else {
         showSettingsUploadStatus(
           data.message || "Upload failed. Please try again.",
@@ -1580,10 +2026,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 10000); // 10 second timeout
 
   checkAuth();
-  setupUpgradeButton();
 
   // Setup variations popup functionality
   setupVariationsPopup();
+
+  // Check if we should show trial expiration reminder
+  if (checkTrialExpirationReminder()) {
+    showTrialExpirationModal();
+  }
 });
 
 // Setup variations popup functionality
@@ -1606,15 +2056,6 @@ function setupVariationsPopup() {
       }
     }
   });
-}
-
-// Setup upgrade button
-function setupUpgradeButton() {
-  if (upgradeBtnBanner) {
-    upgradeBtnBanner.addEventListener("click", () => {
-      window.location.href = "/pricing.html";
-    });
-  }
 }
 
 // Text List Functions
