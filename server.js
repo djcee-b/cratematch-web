@@ -13,7 +13,11 @@ const {
   storageOperations,
   machineOperations,
 } = require("./supabase-client");
-const { requireAuth, requireActiveSubscription } = require("./auth-middleware");
+const {
+  requireAuth,
+  requireActiveSubscription,
+  checkFreeUserExportLimit,
+} = require("./auth-middleware");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -686,6 +690,7 @@ app.post(
   "/process-playlist",
   requireAuth,
   requireActiveSubscription,
+  checkFreeUserExportLimit,
   async (req, res) => {
     let databaseFileName;
     try {
@@ -1139,6 +1144,7 @@ app.get(
   "/process-playlist-progress",
   requireAuthForProgress,
   requireActiveSubscriptionForProgress,
+  checkFreeUserExportLimit,
   async (req, res) => {
     // Extract variables outside try block so they're available in catch
     const { playlistUrl, threshold, databaseFileName } = req.query;
@@ -1731,6 +1737,43 @@ app.get("/health", (req, res) => {
     environment: process.env.NODE_ENV || "development",
     version: process.env.npm_package_version || "1.0.0",
   });
+});
+
+// Manual daily export reset endpoint (admin only)
+app.post("/admin/reset-daily-exports", requireAuth, async (req, res) => {
+  try {
+    // Check if user is admin (you can customize this logic)
+    if (req.user.email !== process.env.ADMIN_EMAIL) {
+      return res.status(403).json({
+        error: "Admin access required",
+        message: "Only administrators can reset daily exports",
+      });
+    }
+
+    // Call the Supabase function to reset daily exports
+    const { data, error } = await supabase.rpc("manual_reset_daily_exports");
+
+    if (error) {
+      console.error("Error resetting daily exports:", error);
+      return res.status(500).json({
+        error: "Reset failed",
+        message: "Failed to reset daily exports",
+      });
+    }
+
+    console.log("✅ Daily exports reset manually:", data);
+    res.json({
+      success: true,
+      message: "Daily exports reset successfully",
+      data: data,
+    });
+  } catch (error) {
+    console.error("Manual reset error:", error);
+    res.status(500).json({
+      error: "Reset failed",
+      message: "An error occurred while resetting daily exports",
+    });
+  }
 });
 
 // Serve the main application

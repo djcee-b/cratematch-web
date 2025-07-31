@@ -171,7 +171,7 @@ async function testProcessing() {
   try {
     // Simulate playlist processing request
     const response = await axios.post(
-      `${CONFIG.baseURL}/api/process-playlist`,
+      `${CONFIG.baseURL}/process-playlist`,
       {
         playlistUrl: playlist,
         threshold: Math.floor(Math.random() * 20) + 80, // Random threshold 80-100
