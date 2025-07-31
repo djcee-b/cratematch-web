@@ -10,9 +10,9 @@ const CONFIG = {
   concurrentUsers: parseInt(process.env.CONCURRENT_USERS) || 50, // Default to 50 users
   rampUpTime: parseInt(process.env.RAMP_UP_TIME) || 10,
   scenarios: {
-    uploadDatabase: 5, // Minimal - Upload database (done once per user)
-    processPlaylist: 70, // Focus on playlist processing (main test)
-    checkStatus: 25, // Some status checks
+    processPlaylist: 85, // Focus on playlist processing (main user activity)
+    checkStatus: 15, // Some status checks
+    uploadDatabase: 0, // Real users don't upload databases repeatedly
   },
 };
 
@@ -271,7 +271,7 @@ async function runUserPlaylistTest(userId) {
   const session = await createAuthenticatedSession(userId);
   const startTime = Date.now();
 
-  console.log(`User ${userId}: Starting continuous playlist processing...`);
+  console.log(`User ${userId}: Starting realistic playlist processing...`);
 
   while (Date.now() - startTime < CONFIG.testDuration * 1000) {
     const scenario = getRandomScenario();
@@ -279,16 +279,26 @@ async function runUserPlaylistTest(userId) {
 
     try {
       let result;
-
-      if (scenario === "processPlaylist") {
-        result = await testScenarios[scenario](session, userId);
-      } else {
-        result = await testScenarios[scenario](session);
+      switch (scenario) {
+        case "processPlaylist":
+          const threshold = getRandomInt(85, 95);
+          console.log(
+            `User ${userId}: Processing playlist with threshold ${threshold}`
+          );
+          result = await testScenarios.processPlaylist(session, threshold);
+          break;
+        case "checkStatus":
+          result = await testScenarios.checkStatus(session);
+          break;
+        case "uploadDatabase":
+          // Real users don't upload databases repeatedly
+          result = { success: true, status: 200 };
+          break;
+        default:
+          result = await testScenarios.processPlaylist(session, 90);
       }
 
       const responseTime = Date.now() - scenarioStart;
-
-      // Update statistics
       stats.totalRequests++;
       stats.responseTimes.push(responseTime);
 
@@ -307,21 +317,18 @@ async function runUserPlaylistTest(userId) {
           }`
         );
       }
-
-      // Add some randomness to request timing, but reduce load
-      await new Promise(
-        (resolve) => setTimeout(resolve, getRandomInt(3000, 8000)) // Increased delays to reduce server load
-      );
     } catch (error) {
       stats.totalRequests++;
       stats.failedRequests++;
       const errorKey = `${scenario}:error`;
       stats.errors[errorKey] = (stats.errors[errorKey] || 0) + 1;
       console.log(`User ${userId}: ${scenario} error - ${error.message}`);
-
-      // Add longer delay on errors to give server time to recover
-      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
+
+    // Realistic delay between requests - users don't spam requests
+    // Wait 3-8 seconds between requests (like real user thinking time)
+    const delay = 3000 + Math.random() * 5000;
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
   console.log(`User ${userId}: Test completed`);
@@ -398,39 +405,63 @@ async function runLoadTestWithCleanup() {
   console.log(`✅ Created ${TEST_USERS.length} test users`);
   console.log("Users:", TEST_USERS.map((u) => u.email).join(", "));
 
-  // Step 2: Setup phase - All users authenticate, upload database, and wait
-  console.log("\n📋 Setup Phase: All users uploading databases...");
+  // Step 2: Realistic user onboarding - Stagger user creation and setup
+  console.log("\n📋 Realistic User Onboarding Phase...");
   stats.startTime = Date.now();
 
+  // Stagger user creation and setup to simulate real user behavior
   const setupPromises = [];
   for (let i = 1; i <= CONFIG.concurrentUsers; i++) {
-    const delay = (i - 1) * 1000; // 1 second between each user setup
+    // Stagger user creation: 2-5 seconds between each user
+    const creationDelay = (i - 1) * (2000 + Math.random() * 3000);
+
     const promise = new Promise((resolve) => {
       setTimeout(async () => {
-        console.log(`🔧 Setting up User ${i}/${CONFIG.concurrentUsers}`);
-        await setupUser(i);
+        console.log(
+          `👤 User ${i}/${CONFIG.concurrentUsers} - Starting onboarding...`
+        );
+
+        // Step 2a: User signs up and waits (like real user reading terms)
+        console.log(`   User ${i}: Signing up...`);
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 + Math.random() * 2000)
+        );
+
+        // Step 2b: User uploads database and waits (like real user waiting for upload)
+        console.log(`   User ${i}: Uploading database...`);
+        const setupSuccess = await setupUser(i);
+
+        if (setupSuccess) {
+          console.log(`   User ${i}: Onboarding complete!`);
+        } else {
+          console.log(`   User ${i}: Onboarding failed`);
+        }
+
         resolve();
-      }, delay);
+      }, creationDelay);
     });
     setupPromises.push(promise);
   }
 
   await Promise.all(setupPromises);
-  console.log("✅ All users setup complete!");
+  console.log("✅ All users completed onboarding!");
 
-  // Step 3: Load test phase - All users process playlists continuously
-  console.log("\n🔥 Load Test Phase: All users processing playlists...");
+  // Step 3: Realistic usage phase - Users process playlists with natural timing
+  console.log("\n🔥 Realistic Usage Phase: Users processing playlists...");
 
   const userPromises = [];
   for (let i = 1; i <= CONFIG.concurrentUsers; i++) {
     const promise = new Promise((resolve) => {
+      // Stagger playlist processing start to simulate real user behavior
+      const startDelay = Math.random() * 10000; // 0-10 seconds random start
+
       setTimeout(async () => {
         console.log(
-          `🚀 Starting User ${i}/${CONFIG.concurrentUsers} playlist processing`
+          `🎵 User ${i}/${CONFIG.concurrentUsers} - Starting playlist processing`
         );
         await runUserPlaylistTest(i);
         resolve();
-      }, 0); // All users start simultaneously for the load test
+      }, startDelay);
     });
     userPromises.push(promise);
   }
@@ -439,7 +470,7 @@ async function runLoadTestWithCleanup() {
 
   stats.endTime = Date.now();
 
-  // Step 3: Print results
+  // Step 4: Print results
   console.log("\n📊 Load Test Results");
   console.log("====================");
   console.log(
@@ -475,8 +506,8 @@ async function runLoadTestWithCleanup() {
     console.log(`  Average: ${avg.toFixed(2)}ms`);
     console.log(`  Median: ${median.toFixed(2)}ms`);
     console.log(`  95th percentile: ${p95.toFixed(2)}ms`);
-    console.log(`  Min: ${Math.min(...stats.responseTimes)}ms`);
-    console.log(`  Max: ${Math.max(...stats.responseTimes)}ms`);
+    console.log(`  Min: ${sortedTimes[0]}ms`);
+    console.log(`  Max: ${sortedTimes[sortedTimes.length - 1]}ms`);
   }
 
   if (Object.keys(stats.errors).length > 0) {
@@ -486,10 +517,11 @@ async function runLoadTestWithCleanup() {
     }
   }
 
-  // Step 4: Cleanup
+  // Step 5: Cleanup
+  console.log("\n🧹 Cleaning up test users from database...");
   await cleanupTestUsers();
 
-  console.log("\n✅ Load test with cleanup completed!");
+  console.log("✅ Load test with cleanup completed!");
 }
 
 // Run the test

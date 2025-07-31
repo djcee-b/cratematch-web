@@ -1,5 +1,46 @@
 const { authOperations } = require("./supabase-client");
 
+// Session caching to reduce authentication overhead
+const sessionCache = new Map();
+const subscriptionCache = new Map();
+const SESSION_CACHE_TTL = 10 * 60 * 1000; // 10 minutes (increased from 5)
+const SUBSCRIPTION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes (increased from 2)
+
+// Clean up expired cache entries periodically
+setInterval(() => {
+  const now = Date.now();
+
+  // Clean session cache
+  for (const [token, data] of sessionCache.entries()) {
+    if (now - data.timestamp > SESSION_CACHE_TTL) {
+      sessionCache.delete(token);
+    }
+  }
+
+  // Clean subscription cache
+  for (const [key, data] of subscriptionCache.entries()) {
+    if (now - data.timestamp > SUBSCRIPTION_CACHE_TTL) {
+      subscriptionCache.delete(key);
+    }
+  }
+}, 120000); // Run cleanup every 2 minutes (increased from 1)
+
+// Helper function to retry Supabase calls
+async function retrySupabaseCall(callFn, maxRetries = 2) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await callFn();
+      return result;
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      // Wait before retry (exponential backoff)
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+}
+
 // Middleware to check if user is authenticated
 const requireAuth = async (req, res, next) => {
   try {
@@ -14,12 +55,25 @@ const requireAuth = async (req, res, next) => {
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-    // Set the session token for Supabase
+    // Check session cache first
+    const cachedSession = sessionCache.get(token);
+    if (
+      cachedSession &&
+      Date.now() - cachedSession.timestamp < SESSION_CACHE_TTL
+    ) {
+      req.user = cachedSession.user;
+      return next();
+    }
+
+    // Set the session token for Supabase with retry logic
     const { supabase } = require("./supabase-client");
+
     const {
       data: { user },
       error,
-    } = await supabase.auth.getUser(token);
+    } = await retrySupabaseCall(async () => {
+      return await supabase.auth.getUser(token);
+    });
 
     if (error || !user) {
       return res.status(401).json({
@@ -27,6 +81,9 @@ const requireAuth = async (req, res, next) => {
         message: "Please sign in again",
       });
     }
+
+    // Cache the validated user session
+    sessionCache.set(token, { user, timestamp: Date.now() });
 
     // Add user to request object
     req.user = user;
@@ -48,6 +105,17 @@ const requireActiveSubscription = async (req, res, next) => {
         error: "Authentication required",
         message: "Please sign in to continue",
       });
+    }
+
+    // Check subscription cache first
+    const subscriptionCacheKey = `subscription_${req.user.email}`;
+    const cachedSubscription = subscriptionCache.get(subscriptionCacheKey);
+    if (
+      cachedSubscription &&
+      Date.now() - cachedSubscription.timestamp < SUBSCRIPTION_CACHE_TTL
+    ) {
+      req.machine = cachedSubscription.machine;
+      return next();
     }
 
     // Get user's machine record to check subscription status
@@ -123,18 +191,21 @@ const requireActiveSubscription = async (req, res, next) => {
         });
       }
 
+      // Cache the new machine data
+      subscriptionCache.set(subscriptionCacheKey, {
+        machine: machineData,
+        timestamp: Date.now(),
+      });
       req.machine = machineData;
       return next();
     }
 
-    // Update last_seen timestamp for existing machine
-    const { error: updateError } = await machineOperations.updateMachine(
-      machine.id,
-      { last_seen: new Date().toISOString() }
-    );
-    if (updateError) {
-      console.error("Error updating last_seen:", updateError);
-    }
+    // Update last_seen timestamp for existing machine (but don't block on this)
+    machineOperations
+      .updateMachine(machine.id, { last_seen: new Date().toISOString() })
+      .catch((error) => {
+        console.error("Error updating last_seen:", error);
+      });
 
     // Check if user is in trial period
     const now = new Date();
@@ -158,6 +229,11 @@ const requireActiveSubscription = async (req, res, next) => {
     });
 
     if (machine.role === "trial" && trialEnd && now < trialEnd) {
+      // Cache the machine data
+      subscriptionCache.set(subscriptionCacheKey, {
+        machine,
+        timestamp: Date.now(),
+      });
       req.machine = machine;
       return next();
     }
@@ -193,20 +269,30 @@ const requireActiveSubscription = async (req, res, next) => {
               updateError
             );
             // If downgrade fails, still allow access but log the error
-            req.machine = {
+            const updatedMachine = {
               ...machine,
               role: "free",
               subscription_type: null,
             };
+            subscriptionCache.set(subscriptionCacheKey, {
+              machine: updatedMachine,
+              timestamp: Date.now(),
+            });
+            req.machine = updatedMachine;
             return next();
           }
 
           // Update the machine object with new role
-          req.machine = {
+          const updatedMachine = {
             ...machine,
             role: "free",
             subscription_type: null,
           };
+          subscriptionCache.set(subscriptionCacheKey, {
+            machine: updatedMachine,
+            timestamp: Date.now(),
+          });
+          req.machine = updatedMachine;
           console.log(
             "✅ Premium user auto-downgraded to free:",
             req.user.email
@@ -219,12 +305,20 @@ const requireActiveSubscription = async (req, res, next) => {
       }
 
       // Subscription is still active
+      subscriptionCache.set(subscriptionCacheKey, {
+        machine,
+        timestamp: Date.now(),
+      });
       req.machine = machine;
       return next();
     }
 
     // Check if user has free access
     if (machine.role === "free") {
+      subscriptionCache.set(subscriptionCacheKey, {
+        machine,
+        timestamp: Date.now(),
+      });
       req.machine = machine;
       return next();
     }
@@ -250,12 +344,22 @@ const requireActiveSubscription = async (req, res, next) => {
       if (updateError) {
         console.error("❌ Error auto-downgrading user:", updateError);
         // If downgrade fails, still allow access but log the error
-        req.machine = { ...machine, role: "free" };
+        const updatedMachine = { ...machine, role: "free" };
+        subscriptionCache.set(subscriptionCacheKey, {
+          machine: updatedMachine,
+          timestamp: Date.now(),
+        });
+        req.machine = updatedMachine;
         return next();
       }
 
       // Update the machine object with new role
-      req.machine = { ...machine, role: "free" };
+      const updatedMachine = { ...machine, role: "free" };
+      subscriptionCache.set(subscriptionCacheKey, {
+        machine: updatedMachine,
+        timestamp: Date.now(),
+      });
+      req.machine = updatedMachine;
       console.log("✅ User auto-downgraded to free:", req.user.email);
 
       // Set a flag in the response to indicate auto-downgrade
@@ -264,6 +368,10 @@ const requireActiveSubscription = async (req, res, next) => {
     }
 
     // Unknown role - treat as free user
+    subscriptionCache.set(subscriptionCacheKey, {
+      machine,
+      timestamp: Date.now(),
+    });
     req.machine = machine;
     return next();
   } catch (error) {
@@ -370,6 +478,17 @@ const optionalAuth = async (req, res, next) => {
     }
 
     const token = authHeader.substring(7);
+
+    // Check session cache first
+    const cachedSession = sessionCache.get(token);
+    if (
+      cachedSession &&
+      Date.now() - cachedSession.timestamp < SESSION_CACHE_TTL
+    ) {
+      req.user = cachedSession.user;
+      return next();
+    }
+
     const { supabase } = require("./supabase-client");
     const {
       data: { user },
@@ -377,6 +496,8 @@ const optionalAuth = async (req, res, next) => {
     } = await supabase.auth.getUser(token);
 
     if (!error && user) {
+      // Cache the validated user session
+      sessionCache.set(token, { user, timestamp: Date.now() });
       req.user = user;
     }
 
@@ -387,9 +508,46 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
+// Cache management functions
+const clearSessionCache = () => {
+  const size = sessionCache.size;
+  sessionCache.clear();
+  console.log(`🧹 Cleared session cache (${size} entries)`);
+};
+
+const clearSubscriptionCache = () => {
+  const size = subscriptionCache.size;
+  subscriptionCache.clear();
+  console.log(`🧹 Cleared subscription cache (${size} entries)`);
+};
+
+const getCacheStats = () => {
+  return {
+    sessionCache: {
+      size: sessionCache.size,
+      ttl: SESSION_CACHE_TTL,
+    },
+    subscriptionCache: {
+      size: subscriptionCache.size,
+      ttl: SUBSCRIPTION_CACHE_TTL,
+    },
+  };
+};
+
+// Log cache stats periodically
+setInterval(() => {
+  const stats = getCacheStats();
+  console.log(
+    `📊 Cache Stats: Sessions=${stats.sessionCache.size}, Subscriptions=${stats.subscriptionCache.size}`
+  );
+}, 300000); // Log every 5 minutes
+
 module.exports = {
   requireAuth,
   requireActiveSubscription,
   optionalAuth,
   checkFreeUserExportLimit,
+  clearSessionCache,
+  clearSubscriptionCache,
+  getCacheStats,
 };
