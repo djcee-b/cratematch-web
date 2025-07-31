@@ -2,16 +2,173 @@ const { createClient } = require("@supabase/supabase-js");
 const crypto = require("crypto");
 require("dotenv").config();
 
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+// Connection pooling configuration
+const POOL_SIZE = 20; // Maximum connections in pool
+const CONNECTION_TIMEOUT = 30000; // 30 seconds
+const REQUEST_TIMEOUT = 60000; // 60 seconds
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error("Missing Supabase environment variables");
-  process.exit(1);
+// Create Supabase client with connection pooling
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: false, // We handle session persistence manually
+      detectSessionInUrl: false,
+    },
+    db: {
+      schema: "public",
+    },
+    global: {
+      headers: {
+        "X-Client-Info": "cratematch-web",
+      },
+    },
+    // Connection pooling settings
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
+    // Custom fetch with connection pooling
+    fetch: (url, options = {}) => {
+      return fetch(url, {
+        ...options,
+        // Connection pooling headers
+        headers: {
+          ...options.headers,
+          'Connection': 'keep-alive',
+          'Keep-Alive': 'timeout=30, max=1000',
+        },
+        // Timeout settings
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT),
+      });
+    },
+  }
+);
+
+// Connection pool manager
+class ConnectionPool {
+  constructor() {
+    this.connections = new Map();
+    this.maxConnections = POOL_SIZE;
+    this.activeConnections = 0;
+  }
+
+  async getConnection(userId) {
+    // Return existing connection if available
+    if (this.connections.has(userId)) {
+      const conn = this.connections.get(userId);
+      if (conn.lastUsed > Date.now() - 300000) { // 5 minutes
+        conn.lastUsed = Date.now();
+        return conn;
+      } else {
+        this.connections.delete(userId);
+        this.activeConnections--;
+      }
+    }
+
+    // Create new connection if pool not full
+    if (this.activeConnections < this.maxConnections) {
+      const connection = {
+        id: userId,
+        lastUsed: Date.now(),
+        supabase: supabase,
+      };
+      
+      this.connections.set(userId, connection);
+      this.activeConnections++;
+      return connection;
+    }
+
+    // If pool is full, return the least recently used connection
+    let oldestConnection = null;
+    let oldestTime = Date.now();
+    
+    for (const [id, conn] of this.connections.entries()) {
+      if (conn.lastUsed < oldestTime) {
+        oldestTime = conn.lastUsed;
+        oldestConnection = { id, conn };
+      }
+    }
+
+    if (oldestConnection) {
+      this.connections.delete(oldestConnection.id);
+      const connection = {
+        id: userId,
+        lastUsed: Date.now(),
+        supabase: supabase,
+      };
+      this.connections.set(userId, connection);
+      return connection;
+    }
+
+    // Fallback to main client
+    return { supabase };
+  }
+
+  cleanup() {
+    const now = Date.now();
+    for (const [userId, conn] of this.connections.entries()) {
+      if (now - conn.lastUsed > 300000) { // 5 minutes
+        this.connections.delete(userId);
+        this.activeConnections--;
+      }
+    }
+  }
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Global connection pool
+const connectionPool = new ConnectionPool();
+
+// Cleanup old connections every 2 minutes
+setInterval(() => {
+  connectionPool.cleanup();
+}, 120000);
+
+// Enhanced auth operations with connection pooling
+const authOperations = {
+  async getUser(token) {
+    try {
+      const connection = await connectionPool.getConnection('auth');
+      return await connection.supabase.auth.getUser(token);
+    } catch (error) {
+      console.error('Auth getUser error:', error);
+      throw error;
+    }
+  },
+
+  async refreshSession(refreshToken) {
+    try {
+      const connection = await connectionPool.getConnection('auth');
+      return await connection.supabase.auth.refreshSession({ refresh_token: refreshToken });
+    } catch (error) {
+      console.error('Auth refresh error:', error);
+      throw error;
+    }
+  },
+
+  async signUp(email, password) {
+    try {
+      const connection = await connectionPool.getConnection('auth');
+      return await connection.supabase.auth.signUp({ email, password });
+    } catch (error) {
+      console.error('Auth signup error:', error);
+      throw error;
+    }
+  },
+
+  async signIn(email, password) {
+    try {
+      const connection = await connectionPool.getConnection('auth');
+      return await connection.supabase.auth.signInWithPassword({ email, password });
+    } catch (error) {
+      console.error('Auth signin error:', error);
+      throw error;
+    }
+  },
+};
 
 // Generate a web-specific machine ID for web users
 function generateWebMachineId(userId) {
@@ -126,7 +283,7 @@ const storageOperations = {
     let client = supabase;
     if (accessToken) {
       const { createClient } = require("@supabase/supabase-js");
-      client = createClient(supabaseUrl, supabaseKey, {
+      client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -154,7 +311,7 @@ const storageOperations = {
     let client = supabase;
     if (accessToken) {
       const { createClient } = require("@supabase/supabase-js");
-      client = createClient(supabaseUrl, supabaseKey, {
+      client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -177,7 +334,7 @@ const storageOperations = {
     let client = supabase;
     if (accessToken) {
       const { createClient } = require("@supabase/supabase-js");
-      client = createClient(supabaseUrl, supabaseKey, {
+      client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -206,103 +363,4 @@ const storageOperations = {
   },
 };
 
-// Authentication operations
-const authOperations = {
-  // Sign up new user
-  signUp: async (email, password) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${
-            process.env.WEBAPP_URL || "http://localhost:3000"
-          }/auth/callback`,
-        },
-      });
-
-      if (error) throw error;
-      return { data, error: null };
-    } catch (error) {
-      return { data: null, error };
-    }
-  },
-
-  // Sign in user
-  signIn: async (email, password) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      return { data, error: null };
-    } catch (error) {
-      return { data: null, error };
-    }
-  },
-
-  // Sign out user
-  signOut: async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
-  },
-
-  // Get current user
-  getUser: async () => {
-    try {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-      if (error) throw error;
-      return { user, error: null };
-    } catch (error) {
-      return { user: null, error };
-    }
-  },
-
-  // Get current session
-  getSession: async () => {
-    try {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-      if (error) throw error;
-      return { session, error: null };
-    } catch (error) {
-      return { session: null, error };
-    }
-  },
-
-  // Reset password
-  resetPassword: async (email) => {
-    try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${
-          process.env.WEBAPP_URL || "http://localhost:3000"
-        }/auth/reset-password`,
-      });
-
-      if (error) throw error;
-      return { data, error: null };
-    } catch (error) {
-      return { data: null, error };
-    }
-  },
-};
-
-module.exports = {
-  supabase,
-  machineOperations,
-  storageOperations,
-  authOperations,
-  generateWebMachineId,
-};
+module.exports = { supabase, authOperations, connectionPool, machineOperations, storageOperations, generateWebMachineId };

@@ -3,27 +3,59 @@ const { authOperations } = require("./supabase-client");
 // Session caching to reduce authentication overhead
 const sessionCache = new Map();
 const subscriptionCache = new Map();
-const SESSION_CACHE_TTL = 10 * 60 * 1000; // 10 minutes (increased from 5)
-const SUBSCRIPTION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes (increased from 2)
+const SESSION_CACHE_TTL = 15 * 60 * 1000; // 15 minutes (increased from 10)
+const SUBSCRIPTION_CACHE_TTL = 10 * 60 * 1000; // 10 minutes (increased from 5)
+const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // Refresh tokens 5 minutes before expiry
 
 // Clean up expired cache entries periodically
 setInterval(() => {
   const now = Date.now();
-
+  
   // Clean session cache
   for (const [token, data] of sessionCache.entries()) {
     if (now - data.timestamp > SESSION_CACHE_TTL) {
       sessionCache.delete(token);
     }
   }
-
+  
   // Clean subscription cache
   for (const [key, data] of subscriptionCache.entries()) {
     if (now - data.timestamp > SUBSCRIPTION_CACHE_TTL) {
       subscriptionCache.delete(key);
     }
   }
-}, 120000); // Run cleanup every 2 minutes (increased from 1)
+}, 300000); // Run cleanup every 5 minutes (increased from 2)
+
+// Helper function to refresh token if needed
+async function refreshTokenIfNeeded(token, user) {
+  const now = Date.now();
+  const tokenExpiry = user?.exp || 0;
+  const timeUntilExpiry = tokenExpiry * 1000 - now;
+  
+  // If token expires within threshold, try to refresh
+  if (timeUntilExpiry < TOKEN_REFRESH_THRESHOLD && timeUntilExpiry > 0) {
+    try {
+      const { supabase } = require("./supabase-client");
+      const { data, error } = await supabase.auth.refreshSession({
+        refresh_token: user?.refresh_token
+      });
+      
+      if (!error && data.session) {
+        // Update cache with new token
+        sessionCache.set(data.session.access_token, {
+          user: data.user,
+          timestamp: now,
+          session: data.session
+        });
+        return data.session.access_token;
+      }
+    } catch (error) {
+      console.warn('Token refresh failed:', error.message);
+    }
+  }
+  
+  return token;
+}
 
 // Helper function to retry Supabase calls
 async function retrySupabaseCall(callFn, maxRetries = 2) {
@@ -49,31 +81,30 @@ const requireAuth = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         error: "Authentication required",
-        message: "Please sign in to continue",
+        message: "Please sign in to access this resource",
       });
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
+    const token = authHeader.substring(7);
+    
     // Check session cache first
     const cachedSession = sessionCache.get(token);
-    if (
-      cachedSession &&
-      Date.now() - cachedSession.timestamp < SESSION_CACHE_TTL
-    ) {
+    if (cachedSession && Date.now() - cachedSession.timestamp < SESSION_CACHE_TTL) {
+      // Check if token needs refresh
+      const refreshedToken = await refreshTokenIfNeeded(token, cachedSession.user);
+      if (refreshedToken !== token) {
+        // Update the request with new token
+        req.headers.authorization = `Bearer ${refreshedToken}`;
+      }
       req.user = cachedSession.user;
       return next();
     }
 
-    // Set the session token for Supabase with retry logic
     const { supabase } = require("./supabase-client");
-
     const {
       data: { user },
       error,
-    } = await retrySupabaseCall(async () => {
-      return await supabase.auth.getUser(token);
-    });
+    } = await retrySupabaseCall(() => supabase.auth.getUser(token));
 
     if (error || !user) {
       return res.status(401).json({
@@ -82,10 +113,16 @@ const requireAuth = async (req, res, next) => {
       });
     }
 
-    // Cache the validated user session
-    sessionCache.set(token, { user, timestamp: Date.now() });
+    // Check if token needs refresh
+    const refreshedToken = await refreshTokenIfNeeded(token, user);
+    
+    // Cache the session
+    sessionCache.set(refreshedToken, {
+      user,
+      timestamp: Date.now(),
+      session: { access_token: refreshedToken }
+    });
 
-    // Add user to request object
     req.user = user;
     next();
   } catch (error) {
@@ -478,13 +515,16 @@ const optionalAuth = async (req, res, next) => {
     }
 
     const token = authHeader.substring(7);
-
+    
     // Check session cache first
     const cachedSession = sessionCache.get(token);
-    if (
-      cachedSession &&
-      Date.now() - cachedSession.timestamp < SESSION_CACHE_TTL
-    ) {
+    if (cachedSession && Date.now() - cachedSession.timestamp < SESSION_CACHE_TTL) {
+      // Check if token needs refresh
+      const refreshedToken = await refreshTokenIfNeeded(token, cachedSession.user);
+      if (refreshedToken !== token) {
+        // Update the request with new token
+        req.headers.authorization = `Bearer ${refreshedToken}`;
+      }
       req.user = cachedSession.user;
       return next();
     }
@@ -493,20 +533,110 @@ const optionalAuth = async (req, res, next) => {
     const {
       data: { user },
       error,
-    } = await supabase.auth.getUser(token);
+    } = await retrySupabaseCall(() => supabase.auth.getUser(token));
 
     if (!error && user) {
-      // Cache the validated user session
-      sessionCache.set(token, { user, timestamp: Date.now() });
+      // Check if token needs refresh
+      const refreshedToken = await refreshTokenIfNeeded(token, user);
+      
+      // Cache the session
+      sessionCache.set(refreshedToken, {
+        user,
+        timestamp: Date.now(),
+        session: { access_token: refreshedToken }
+      });
+      
       req.user = user;
     }
 
     next();
   } catch (error) {
     console.error("Optional auth middleware error:", error);
-    next(); // Continue without user
+    next(); // Continue without user on error
   }
 };
+
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute window
+const RATE_LIMIT_MAX_REQUESTS = 100; // Max requests per window per user
+const RATE_LIMIT_MAX_GLOBAL = 1000; // Max requests per window globally
+
+// Rate limiting storage
+const rateLimitStore = new Map();
+const globalRateLimit = {
+  count: 0,
+  resetTime: Date.now() + RATE_LIMIT_WINDOW
+};
+
+// Rate limiting middleware
+const rateLimit = (req, res, next) => {
+  const now = Date.now();
+  const userKey = req.user?.id || req.ip || 'anonymous';
+  
+  // Reset global counter if window expired
+  if (now > globalRateLimit.resetTime) {
+    globalRateLimit.count = 0;
+    globalRateLimit.resetTime = now + RATE_LIMIT_WINDOW;
+  }
+  
+  // Check global rate limit
+  if (globalRateLimit.count >= RATE_LIMIT_MAX_GLOBAL) {
+    return res.status(429).json({
+      error: "Rate limit exceeded",
+      message: "Too many requests globally. Please try again later.",
+      retryAfter: Math.ceil((globalRateLimit.resetTime - now) / 1000)
+    });
+  }
+  
+  // Get or create user rate limit entry
+  let userLimit = rateLimitStore.get(userKey);
+  if (!userLimit || now > userLimit.resetTime) {
+    userLimit = {
+      count: 0,
+      resetTime: now + RATE_LIMIT_WINDOW
+    };
+    rateLimitStore.set(userKey, userLimit);
+  }
+  
+  // Check user rate limit
+  if (userLimit.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return res.status(429).json({
+      error: "Rate limit exceeded",
+      message: "Too many requests. Please try again later.",
+      retryAfter: Math.ceil((userLimit.resetTime - now) / 1000)
+    });
+  }
+  
+  // Increment counters
+  userLimit.count++;
+  globalRateLimit.count++;
+  
+  // Add rate limit headers
+  res.set({
+    'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS,
+    'X-RateLimit-Remaining': RATE_LIMIT_MAX_REQUESTS - userLimit.count,
+    'X-RateLimit-Reset': userLimit.resetTime,
+    'X-RateLimit-Global-Remaining': RATE_LIMIT_MAX_GLOBAL - globalRateLimit.count
+  });
+  
+  next();
+};
+
+// Clean up old rate limit entries
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, limit] of rateLimitStore.entries()) {
+    if (now > limit.resetTime) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 60000); // Clean up every minute
+
+// Enhanced requireAuth with rate limiting
+const requireAuthWithRateLimit = [rateLimit, requireAuth];
+
+// Enhanced optionalAuth with rate limiting
+const optionalAuthWithRateLimit = [rateLimit, optionalAuth];
 
 // Cache management functions
 const clearSessionCache = () => {
@@ -544,10 +674,15 @@ setInterval(() => {
 
 module.exports = {
   requireAuth,
-  requireActiveSubscription,
   optionalAuth,
-  checkFreeUserExportLimit,
+  requireAuthWithRateLimit,
+  optionalAuthWithRateLimit,
+  rateLimit,
+  requireActiveSubscription,
   clearSessionCache,
   clearSubscriptionCache,
   getCacheStats,
+  refreshTokenIfNeeded,
+  retrySupabaseCall,
+  circuitBreaker
 };

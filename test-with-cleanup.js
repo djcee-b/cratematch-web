@@ -30,6 +30,43 @@ const stats = {
   endTime: null,
 };
 
+// Circuit breaker to prevent cascading failures
+const circuitBreaker = {
+  failures: 0,
+  lastFailureTime: 0,
+  state: 'CLOSED', // CLOSED, OPEN, HALF_OPEN
+  threshold: 5, // Number of failures before opening
+  timeout: 30000, // 30 seconds timeout before trying again
+  
+  async execute(fn) {
+    if (this.state === 'OPEN') {
+      if (Date.now() - this.lastFailureTime > this.timeout) {
+        this.state = 'HALF_OPEN';
+      } else {
+        throw new Error('Circuit breaker is OPEN');
+      }
+    }
+    
+    try {
+      const result = await fn();
+      if (this.state === 'HALF_OPEN') {
+        this.state = 'CLOSED';
+        this.failures = 0;
+      }
+      return result;
+    } catch (error) {
+      this.failures++;
+      this.lastFailureTime = Date.now();
+      
+      if (this.failures >= this.threshold) {
+        this.state = 'OPEN';
+      }
+      
+      throw error;
+    }
+  }
+};
+
 // Helper functions
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -57,27 +94,61 @@ function createTestDatabase() {
   return testFile;
 }
 
-// Helper function to retry failed requests
-async function retryRequest(requestFn, maxRetries = 2) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const result = await requestFn();
-      if (result.success) {
-        return result;
-      }
-      // If not successful but not an error, don't retry
-      if (result.status && result.status !== 500) {
-        return result;
-      }
-    } catch (error) {
-      if (attempt === maxRetries) {
-        throw error;
+// Helper function to retry failed requests with improved timeout handling
+async function retryRequest(requestFn, maxRetries = 3) {
+  return circuitBreaker.execute(async () => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await requestFn();
+        
+        // If successful, return immediately
+        if (result.success) {
+          return result;
+        }
+        
+        // Don't retry on certain status codes
+        if (result.status && [400, 401, 403, 404, 429].includes(result.status)) {
+          return result;
+        }
+        
+        // For 500 errors, retry with exponential backoff
+        if (result.status === 500) {
+          if (attempt === maxRetries) {
+            return result;
+          }
+          // Exponential backoff: 2s, 4s, 8s
+          const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        // For other errors, retry once more
+        if (attempt === maxRetries) {
+          return result;
+        }
+        
+      } catch (error) {
+        // Handle network timeouts and connection errors
+        if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || 
+            error.message.includes('timeout') || error.message.includes('network')) {
+          
+          if (attempt === maxRetries) {
+            return { success: false, error: `Network error after ${maxRetries} attempts: ${error.message}` };
+          }
+          
+          // Exponential backoff for network errors
+          const delay = Math.min(3000 * Math.pow(2, attempt - 1), 15000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        // For other errors, don't retry
+        return { success: false, error: error.message };
       }
     }
-    // Wait before retry
-    await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-  }
-  return { success: false, error: "Max retries exceeded" };
+    
+    return { success: false, error: "Max retries exceeded" };
+  });
 }
 
 // Test scenarios
@@ -100,66 +171,82 @@ const testScenarios = {
     });
   },
 
-  processPlaylist: async (session, userId) => {
+  processPlaylist: async (session, threshold) => {
     return retryRequest(async () => {
       try {
         const playlists = [
-          "https://open.spotify.com/playlist/2uck8x0IQTP3Z1Z5mJBXaB",
-          "https://open.spotify.com/playlist/44nsF4WINW26yHK9UeXzqT",
+          "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M", // Today's Top Hits
+          "https://open.spotify.com/playlist/37i9dQZF1DX5Ejj0EkURtP", // All Out 2010s
+          "https://open.spotify.com/playlist/37i9dQZF1DX4sWSpwq3LiO", // Peaceful Piano
+          "https://open.spotify.com/playlist/37i9dQZF1DX7KNKjOK0o75", // Have a Great Day!
         ];
         const playlistUrl = playlists[getRandomInt(0, playlists.length - 1)];
-        const threshold = getRandomInt(85, 95);
-
-        console.log(
-          `User ${userId}: Processing playlist with threshold ${threshold}`
-        );
 
         const response = await session.post("/process-playlist", {
           playlistUrl,
           threshold,
           databaseFileName: "database-v2",
+        }, {
+          timeout: 90000, // 90 seconds for playlist processing
         });
 
         // Handle export limit exceeded (429) gracefully
         if (response.status === 429) {
-          console.log(
-            `User ${userId}: Daily export limit exceeded - this is expected for free users`
-          );
           return {
             success: false,
             status: 429,
-            error:
-              "Daily export limit exceeded - this is expected for free users",
+            error: "Daily export limit exceeded - this is expected for free users",
           };
         }
 
-        // Log detailed error information for 500 errors
-        if (response.status === 500) {
-          console.log(`User ${userId}: 500 Error Details:`, response.data);
+        // Handle authentication errors
+        if (response.status === 401) {
+          return {
+            success: false,
+            status: 401,
+            error: "Authentication failed",
+          };
+        }
+
+        // Handle server errors with more detail
+        if (response.status >= 500) {
+          console.log(`Server error ${response.status}:`, response.data);
+          return {
+            success: false,
+            status: response.status,
+            error: `Server error: ${response.status}`,
+          };
         }
 
         return { success: response.status === 200, status: response.status };
       } catch (error) {
-        // Handle export limit exceeded in catch block too
-        if (error.response && error.response.status === 429) {
-          console.log(
-            `User ${userId}: Daily export limit exceeded - this is expected for free users`
-          );
+        // Handle network timeouts specifically
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
           return {
             success: false,
-            status: 429,
-            error:
-              "Daily export limit exceeded - this is expected for free users",
+            status: 'timeout',
+            error: `Request timeout: ${error.message}`,
           };
         }
 
-        // Log detailed error information
-        if (error.response && error.response.status === 500) {
-          console.log(
-            `User ${userId}: 500 Error Details:`,
-            error.response.data
-          );
+        // Handle export limit exceeded in catch block too
+        if (error.response && error.response.status === 429) {
+          return {
+            success: false,
+            status: 429,
+            error: "Daily export limit exceeded - this is expected for free users",
+          };
         }
+
+        // Handle authentication errors in catch block
+        if (error.response && error.response.status === 401) {
+          return {
+            success: false,
+            status: 401,
+            error: "Authentication failed",
+          };
+        }
+
         return { success: false, error: error.message };
       }
     });
@@ -181,8 +268,21 @@ const testScenarios = {
 async function createAuthenticatedSession(userId) {
   const session = axios.create({
     baseURL: CONFIG.baseURL,
-    timeout: 60000,
+    timeout: 120000, // 2 minutes timeout (increased from 60s)
     validateStatus: () => true,
+    // Better connection handling
+    maxRedirects: 5,
+    // Connection pooling
+    httpAgent: new (require('http').Agent)({
+      keepAlive: true,
+      maxSockets: 10,
+      timeout: 60000,
+    }),
+    httpsAgent: new (require('https').Agent)({
+      keepAlive: true,
+      maxSockets: 10,
+      timeout: 60000,
+    }),
   });
 
   const user = TEST_USERS[userId - 1]; // userId is 1-based

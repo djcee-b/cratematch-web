@@ -15,6 +15,8 @@ const {
 } = require("./supabase-client");
 const {
   requireAuth,
+  requireAuthWithRateLimit,
+  optionalAuthWithRateLimit,
   requireActiveSubscription,
   checkFreeUserExportLimit,
 } = require("./auth-middleware");
@@ -685,10 +687,10 @@ app.get(
   }
 );
 
-// Process playlist with authentication
+// Process playlist endpoint
 app.post(
   "/process-playlist",
-  requireAuth,
+  requireAuthWithRateLimit,
   requireActiveSubscription,
   checkFreeUserExportLimit,
   async (req, res) => {
@@ -1831,7 +1833,7 @@ app.get("/settings", (req, res) => {
 });
 
 // Scan History API endpoints
-app.get("/api/scan-history", requireAuth, async (req, res) => {
+app.get("/api/scan-history", requireAuthWithRateLimit, async (req, res) => {
   try {
     const userId = req.user.id;
     console.log("📖 Fetching scan history for user:", userId);
@@ -1873,7 +1875,7 @@ app.get("/api/scan-history", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/scan-history", requireAuth, async (req, res) => {
+app.post("/api/scan-history", requireAuthWithRateLimit, async (req, res) => {
   try {
     const userId = req.user.id;
     const {
