@@ -879,12 +879,13 @@ app.post(
         )
       ) {
         errorMessage =
-          "Free users can only process playlists with 50 tracks or fewer. Please upgrade to Premium for unlimited processing.";
+          "This playlist has more than 50 tracks. Free users are limited to 50 tracks per playlist.";
       }
 
       res.status(500).json({
         error: "Processing failed",
         message: errorMessage,
+        showUpgrade: true,
       });
     }
   }
@@ -1544,7 +1545,7 @@ app.get(
         )
       ) {
         errorMessage =
-          "Free users can only process playlists with 50 tracks or fewer. Please upgrade to Premium for unlimited processing.";
+          "This playlist has more than 50 tracks. Free users are limited to 50 tracks per playlist.";
       }
 
       res.write(
@@ -1552,6 +1553,7 @@ app.get(
           type: "error",
           error: "Processing failed",
           message: errorMessage,
+          showUpgrade: true,
         })}\n\n`
       );
       res.end();
@@ -2012,6 +2014,135 @@ app.delete("/api/scan-history", requireAuth, async (req, res) => {
   } catch (error) {
     console.error("❌ Error in delete all scans endpoint:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Downgrade user to free tier
+app.post("/api/downgrade-to-free", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+
+    console.log("🔄 Downgrading user to free tier:", userEmail);
+
+    // Get the user's machine record
+    const { machineOperations } = require("./supabase-client");
+    const { data: machine, error: machineError } =
+      await machineOperations.getMachineByEmail(userEmail);
+
+    if (machineError) {
+      console.error("❌ Error fetching machine data:", machineError);
+      return res.status(500).json({
+        error: "Failed to fetch user data",
+        message: "Please try again",
+      });
+    }
+
+    if (!machine) {
+      console.error("❌ No machine record found for user:", userEmail);
+      return res.status(404).json({
+        error: "User not found",
+        message: "Please complete onboarding first",
+      });
+    }
+
+    // Update the user's role to "free"
+    const { error: updateError } = await machineOperations.updateMachine(
+      machine.id,
+      {
+        role: "free",
+        updated_at: new Date().toISOString(),
+      }
+    );
+
+    if (updateError) {
+      console.error("❌ Error updating user role:", updateError);
+      return res.status(500).json({
+        error: "Failed to update user role",
+        message: "Please try again",
+      });
+    }
+
+    console.log("✅ User successfully downgraded to free tier:", userEmail);
+    res.json({
+      success: true,
+      message: "Successfully switched to free user",
+      subscriptionStatus: "free",
+    });
+  } catch (error) {
+    console.error("❌ Error in downgrade to free endpoint:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      message: "Please try again",
+    });
+  }
+});
+
+// Reset trial for testing (temporary endpoint)
+app.post("/api/reset-trial", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+
+    console.log("🔄 Resetting trial for user:", userEmail);
+
+    // Get the user's machine record
+    const { machineOperations } = require("./supabase-client");
+    const { data: machine, error: machineError } =
+      await machineOperations.getMachineByEmail(userEmail);
+
+    if (machineError) {
+      console.error("❌ Error fetching machine data:", machineError);
+      return res.status(500).json({
+        error: "Failed to fetch user data",
+        message: "Please try again",
+      });
+    }
+
+    if (!machine) {
+      console.error("❌ No machine record found for user:", userEmail);
+      return res.status(404).json({
+        error: "User not found",
+        message: "Please complete onboarding first",
+      });
+    }
+
+    // Reset trial to 7 days from now
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 7);
+
+    // Update the user's trial
+    const { error: updateError } = await machineOperations.updateMachine(
+      machine.id,
+      {
+        role: "trial",
+        trial_start: new Date().toISOString(),
+        trial_end: trialEndDate.toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    );
+
+    if (updateError) {
+      console.error("❌ Error updating trial:", updateError);
+      return res.status(500).json({
+        error: "Failed to reset trial",
+        message: "Please try again",
+      });
+    }
+
+    console.log("✅ Trial successfully reset for user:", userEmail);
+    res.json({
+      success: true,
+      message: "Trial reset successfully",
+      trial_end: trialEndDate.toISOString(),
+      subscriptionStatus: "trial",
+    });
+  } catch (error) {
+    console.error("❌ Error in reset trial endpoint:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      message: "Please try again",
+    });
   }
 });
 

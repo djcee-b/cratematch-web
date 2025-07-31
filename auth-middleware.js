@@ -83,7 +83,7 @@ const requireActiveSubscription = async (req, res, next) => {
         role: "trial",
         last_seen: new Date().toISOString(),
       };
-      
+
       console.log("Creating new machine record with trial:", machineData);
 
       const { error: upsertError } = await machineOperations.upsertMachine(
@@ -131,14 +131,38 @@ const requireActiveSubscription = async (req, res, next) => {
       return next();
     }
 
-    // User's trial has expired and they don't have free/premium access
+    // User's trial has expired - automatically downgrade to free instead of blocking
     if (machine.role === "trial" && now >= trialEnd) {
-      return res.status(403).json({
-        error: "Trial expired",
-        message: "Your trial has expired. Please upgrade to continue.",
-        trialExpired: true,
-        subscriptionStatus: machine.role,
-      });
+      console.log(
+        "🔄 Trial expired for user:",
+        req.user.email,
+        "- auto-downgrading to free"
+      );
+
+      // Automatically downgrade to free user
+      const { error: updateError } = await machineOperations.updateMachine(
+        machine.id,
+        {
+          role: "free",
+          trial_start: null,
+          trial_end: null,
+        }
+      );
+
+      if (updateError) {
+        console.error("❌ Error auto-downgrading user:", updateError);
+        // If downgrade fails, still allow access but log the error
+        req.machine = { ...machine, role: "free" };
+        return next();
+      }
+
+      // Update the machine object with new role
+      req.machine = { ...machine, role: "free" };
+      console.log("✅ User auto-downgraded to free:", req.user.email);
+
+      // Set a flag in the response to indicate auto-downgrade
+      res.setHeader("X-Auto-Downgraded", "true");
+      return next();
     }
 
     // Unknown role - treat as free user

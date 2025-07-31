@@ -31,7 +31,7 @@ Edit `load-test.js` and update the `baseURL` in the CONFIG object:
 
 ```javascript
 const CONFIG = {
-  baseURL: 'http://your-server-ip:3000', // Update this
+  baseURL: "http://your-server-ip:3000", // Update this
   // ... rest of config
 };
 ```
@@ -39,24 +39,28 @@ const CONFIG = {
 ## 🎯 Test Scenarios
 
 ### Light Load Test (Development)
+
 ```bash
 npm run test:light
 # 10 concurrent users for 1 minute
 ```
 
 ### Medium Load Test (Staging)
+
 ```bash
 npm run test:medium
 # 50 concurrent users for 5 minutes
 ```
 
 ### Heavy Load Test (Production Prep)
+
 ```bash
 npm run test:heavy
 # 100 concurrent users for 10 minutes
 ```
 
 ### Stress Test (Breaking Point)
+
 ```bash
 npm run test:stress
 # 200 concurrent users for 15 minutes
@@ -65,21 +69,25 @@ npm run test:stress
 ## 📊 What Gets Tested
 
 ### 1. **Homepage Access** (30% of traffic)
+
 - Landing page load times
 - Static asset delivery
 - SEO performance
 
 ### 2. **Authentication** (20% of traffic)
+
 - User signup/signin
 - Session management
 - Auth token validation
 
 ### 3. **App Interface** (40% of traffic)
+
 - Main app page loads
 - UI responsiveness
 - Client-side performance
 
 ### 4. **Playlist Processing** (10% of traffic)
+
 - Spotify API integration
 - Serato database matching
 - SSE (Server-Sent Events) performance
@@ -97,12 +105,12 @@ npm run test:stress
 
 ### Performance Targets
 
-| Metric | Target | Warning | Critical |
-|--------|--------|---------|----------|
-| Success Rate | >99% | 95-99% | <95% |
-| Avg Response Time | <500ms | 500ms-1s | >1s |
-| P95 Response Time | <2s | 2-5s | >5s |
-| Requests/sec | >50 | 20-50 | <20 |
+| Metric            | Target | Warning  | Critical |
+| ----------------- | ------ | -------- | -------- |
+| Success Rate      | >99%   | 95-99%   | <95%     |
+| Avg Response Time | <500ms | 500ms-1s | >1s      |
+| P95 Response Time | <2s    | 2-5s     | >5s      |
+| Requests/sec      | >50    | 20-50    | <20      |
 
 ## 🔧 Custom Test Configurations
 
@@ -131,6 +139,7 @@ node load-test.js
 ### Server Metrics to Watch
 
 1. **CPU Usage**
+
    ```bash
    # On your server
    htop
@@ -139,6 +148,7 @@ node load-test.js
    ```
 
 2. **Memory Usage**
+
    ```bash
    # Check memory
    free -h
@@ -147,6 +157,7 @@ node load-test.js
    ```
 
 3. **Network I/O**
+
    ```bash
    # Monitor network
    iftop
@@ -232,16 +243,19 @@ Add to your deployment pipeline:
 ### Based on Load Test Results
 
 1. **If CPU is the bottleneck:**
+
    - Optimize database queries
    - Add caching (Redis)
    - Use worker threads for heavy operations
 
 2. **If memory is the bottleneck:**
+
    - Implement connection pooling
    - Add memory limits to processes
    - Optimize data structures
 
 3. **If network is the bottleneck:**
+
    - Use CDN for static assets
    - Implement compression
    - Optimize API responses
@@ -266,15 +280,16 @@ Add to your deployment pipeline:
 ### Based on Load Test Results
 
 | Concurrent Users | Recommended Server Specs |
-|------------------|--------------------------|
-| 10-50 | 2 CPU, 4GB RAM, SSD |
-| 50-100 | 4 CPU, 8GB RAM, SSD |
-| 100-200 | 8 CPU, 16GB RAM, SSD |
-| 200+ | Consider load balancing |
+| ---------------- | ------------------------ |
+| 10-50            | 2 CPU, 4GB RAM, SSD      |
+| 50-100           | 4 CPU, 8GB RAM, SSD      |
+| 100-200          | 8 CPU, 16GB RAM, SSD     |
+| 200+             | Consider load balancing  |
 
 ### Horizontal Scaling
 
 For high traffic, consider:
+
 - Load balancer (nginx/haproxy)
 - Multiple application instances
 - Database read replicas
@@ -293,4 +308,4 @@ If you encounter issues during load testing:
 
 ---
 
-**Remember**: Load testing is an iterative process. Start conservatively and gradually increase load while monitoring your system's behavior. 
+**Remember**: Load testing is an iterative process. Start conservatively and gradually increase load while monitoring your system's behavior.

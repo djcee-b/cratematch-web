@@ -27,17 +27,29 @@
             <h1>CrateMatch <span class="beta-label">beta</span></h1>
           </div>
         </div>
-        <div class="user-info" id="user-info" style="display: none;">
-          <span class="user-email" id="user-email"></span>
-          <span class="subscription-status" id="subscription-status"></span>
-          <button class="upgrade-btn-header" id="upgrade-btn-header" style="display: none;">Upgrade to Pro</button>
-          <a href="/history.html" class="header-history-btn">History</a>
-          <button class="settings-btn" onclick="window.location.href='/settings'">Settings</button>
-          <button class="sign-out-btn" id="sign-out-btn">Sign Out</button>
+        <div class="header-nav" id="header-nav" style="display: none;">
+          <span class="subscription-badge" id="header-subscription-badge" style="display: none;"></span>
+          <button class="header-upgrade-btn" id="header-upgrade-btn" style="display: none;">Upgrade to Pro</button>
+          <a href="/history.html" class="nav-btn">History</a>
+          <button class="nav-btn" onclick="window.location.href='/settings'">Settings</button>
+          <button class="nav-btn sign-out-btn" id="sign-out-btn">Sign Out</button>
         </div>
       </div>
     </div>
   </header>
+
+  <!-- Trial Banner (shown only for trial users) -->
+  <div class="trial-banner" id="trial-banner" style="display: none;">
+    <div class="container">
+      <div class="trial-banner-content">
+        <div class="trial-banner-left">
+          <span class="trial-banner-label">Free Trial</span>
+          <span class="trial-countdown" id="trial-countdown"></span>
+        </div>
+        <button class="upgrade-btn-banner" id="upgrade-btn-banner">Upgrade to Pro</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Main content -->
   <main class="main-content">
@@ -88,7 +100,6 @@
         <section class="results-section" id="results-section">
           <div class="results-header">
             <h3>Processing Results</h3>
-            <button id="import-another-btn" class="btn btn-secondary">Import Another Playlist</button>
           </div>
           
           <div class="results-summary" id="results-summary">
@@ -115,6 +126,7 @@
             <h3>Download Your Crate</h3>
             <p>Your Serato crate file is ready for download</p>
             <button id="download-btn" class="download-btn">Download Crate File</button>
+            <button id="import-another-btn" class="btn btn-secondary import-another-btn">Import Another Playlist</button>
           </div>
         </section>
       </div>
@@ -129,9 +141,49 @@
       <div class="error-icon">⚠️</div>
       <h3 class="error-title">Processing Error</h3>
       <p class="error-message" id="error-message">An error occurred while processing your playlist.</p>
-      <button class="error-close" id="error-close">Close</button>
+      <div class="error-actions" id="error-actions">
+        <button class="error-close" id="error-close">Close</button>
+        <button class="error-upgrade-btn" id="error-upgrade-btn" style="display: none;">Upgrade to Pro</button>
+      </div>
     </div>
   </div>
+
+  <!-- Trial Expiration Modal -->
+  <div class="trial-expiration-modal" id="trial-expiration-modal">
+    <div class="trial-expiration-content">
+      <div class="trial-expiration-icon">⏰</div>
+      <h3 class="trial-expiration-title">Trial Expired</h3>
+      <p class="trial-expiration-message">Your free trial has ended. Choose how you'd like to continue:</p>
+      
+      <div class="trial-expiration-options">
+        <button class="trial-option-btn trial-upgrade-btn" id="trial-upgrade-btn">
+          <div class="trial-option-icon">⭐</div>
+          <div class="trial-option-content">
+            <h4>Upgrade to Pro</h4>
+            <p>Unlimited playlist processing and all features</p>
+          </div>
+        </button>
+        
+        <button class="trial-option-btn trial-free-btn" id="trial-free-btn">
+          <div class="trial-option-icon">🎵</div>
+          <div class="trial-option-content">
+            <h4>Continue as Free User</h4>
+            <p>Limited to 1 playlist per day with basic features</p>
+          </div>
+        </button>
+        
+        <button class="trial-option-btn trial-remind-btn" id="trial-remind-btn">
+          <div class="trial-option-icon">⏰</div>
+          <div class="trial-option-content">
+            <h4>Remind Me Later</h4>
+            <p>I'll decide later (you can still use free features)</p>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
 
   <!-- Track List Modal -->
   <div class="track-modal" id="track-modal">

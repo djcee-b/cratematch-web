@@ -11,6 +11,7 @@
     "postinstall": "bash scripts/copy-public.sh",
     "load-test": "node load-test.js",
     "load-test-simple": "node load-test-simple.js",
+    "load-test-playlist": "node playlist-load-test.js",
     "load-test-apache": "bash load-test-apache-bench.sh",
     "load-test-wrk": "bash load-test-wrk.sh",
     "load-test-all": "npm run load-test-simple && npm run load-test-apache && npm run load-test-wrk"
